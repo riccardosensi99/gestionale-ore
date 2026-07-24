@@ -15,10 +15,20 @@ export default function MonthView() {
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // Ids creati dall'ultima precompilazione automatica, per poterla annullare.
+  const [prefilled, setPrefilled] = useState(null);
+
+  const days = daysInMonth(month);
+
+  const refreshSummary = useCallback(async () => {
+    const s = await api.get('/summary', { params: { month } });
+    setSummary(s.data.summary);
+  }, [month]);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setPrefilled(null);
     try {
       const [e, s] = await Promise.all([
         api.get('/entries', { params: { month } }),
@@ -41,8 +51,43 @@ export default function MonthView() {
     load();
   }, [load]);
 
+  // Alla prima registrazione di ore del mese, replica lo stesso orario su tutti
+  // gli altri giorni lavorativi ancora vuoti (weekend e festività esclusi).
+  const prefillMonth = async (fromDate, hours) => {
+    const targets = days
+      .filter((d) => d.isWorkingDay && d.date !== fromDate && !entries[d.date])
+      .map((d) => ({ date: d.date, type: 'worked', hours, note: '' }));
+    if (!targets.length) return;
+
+    const { data } = await api.post('/entries/bulk', { entries: targets });
+    setEntries((prev) => {
+      const next = { ...prev };
+      data.entries.forEach((row) => {
+        next[String(row.entry_date).slice(0, 10)] = row;
+      });
+      return next;
+    });
+    setPrefilled({ ids: data.entries.map((e) => e.id), count: data.entries.length, hours });
+    await refreshSummary();
+  };
+
+  const undoPrefill = async () => {
+    const { ids } = prefilled;
+    await api.delete('/entries/bulk', { data: { ids } });
+    setEntries((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach((date) => {
+        if (ids.includes(next[date].id)) delete next[date];
+      });
+      return next;
+    });
+    setPrefilled(null);
+    await refreshSummary();
+  };
+
   const saveDay = async (date, patch) => {
     const existing = entries[date] || {};
+    const wasEmpty = Object.keys(entries).length === 0;
     const payload = {
       date,
       type: patch.type ?? existing.type ?? 'worked',
@@ -52,8 +97,12 @@ export default function MonthView() {
     // Se non c'è tipo e nessun valore, non salvare
     const { data } = await api.post('/entries', payload);
     setEntries((prev) => ({ ...prev, [date]: data.entry }));
-    const s = await api.get('/summary', { params: { month } });
-    setSummary(s.data.summary);
+
+    if (wasEmpty && payload.type === 'worked' && Number(payload.hours) > 0) {
+      await prefillMonth(date, Number(payload.hours));
+      return;
+    }
+    await refreshSummary();
   };
 
   const clearDay = async (date) => {
@@ -65,11 +114,8 @@ export default function MonthView() {
       delete copy[date];
       return copy;
     });
-    const s = await api.get('/summary', { params: { month } });
-    setSummary(s.data.summary);
+    await refreshSummary();
   };
-
-  const days = daysInMonth(month);
 
   return (
     <>
@@ -93,6 +139,16 @@ export default function MonthView() {
 
       <SummaryCards summary={summary} />
 
+      {prefilled && (
+        <div className="notice">
+          <span>
+            Ho compilato {prefilled.count} giorni lavorativi con {prefilled.hours}h.
+            Puoi modificarli singolarmente.
+          </span>
+          <button className="btn secondary" onClick={undoPrefill}>Annulla</button>
+        </div>
+      )}
+
       <section className="section panel">
         <div className="panel-head">
           <div>
@@ -108,7 +164,7 @@ export default function MonthView() {
           <table>
             <thead>
               <tr>
-                <th style={{ width: 130 }}>Giorno</th>
+                <th style={{ width: 180 }}>Giorno</th>
                 <th style={{ width: 200 }}>Tipo</th>
                 <th style={{ width: 120 }}>Ore</th>
                 <th>Nota</th>
@@ -119,9 +175,10 @@ export default function MonthView() {
               {days.map((d) => {
                 const entry = entries[d.date];
                 return (
-                  <tr key={d.date} className={d.isWeekend ? 'weekend' : undefined}>
+                  <tr key={d.date} className={d.isWorkingDay ? undefined : 'weekend'}>
                     <td>
                       <span className="cell-strong">{d.weekday} {d.date.slice(8)}</span>
+                      {d.holiday && <span className="day-note">{d.holiday}</span>}
                     </td>
                     <td>
                       <select

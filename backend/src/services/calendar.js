@@ -1,14 +1,9 @@
-export const TYPE_LABELS = {
-  worked: 'Lavorato',
-  vacation: 'Ferie',
-  sick: 'Malattia/Permesso',
-};
-
 // Calendario lavorativo italiano: lunedì-venerdì, escluse le festività nazionali.
 //
-// NOTA: questa logica è replicata in backend/src/services/calendar.js perché i
-// due pacchetti hanno build e contesti Docker separati. Se cambi le regole qui,
+// NOTA: questa logica è replicata in frontend/src/lib/dates.js perché i due
+// pacchetti hanno build e contesti Docker separati. Se cambi le regole qui,
 // aggiorna anche l'altro file.
+
 const FIXED_HOLIDAYS = {
   '01-01': 'Capodanno',
   '01-06': 'Epifania',
@@ -26,7 +21,7 @@ function iso(year, month, day) {
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
-// Domenica di Pasqua secondo l'algoritmo di Meeus/Jones/Butcher.
+// Domenica di Pasqua secondo l'algoritmo di Meeus/Jones/Butcher (calendario gregoriano).
 export function easterSunday(year) {
   const a = year % 19;
   const b = Math.floor(year / 100);
@@ -45,10 +40,11 @@ export function easterSunday(year) {
   return { month, day };
 }
 
-const holidayCache = new Map();
+const cache = new Map();
 
+// Mappa 'YYYY-MM-DD' -> nome della ricorrenza, per l'anno richiesto.
 export function holidaysForYear(year) {
-  if (holidayCache.has(year)) return holidayCache.get(year);
+  if (cache.has(year)) return cache.get(year);
 
   const map = new Map();
   Object.entries(FIXED_HOLIDAYS).forEach(([md, name]) => {
@@ -56,60 +52,57 @@ export function holidaysForYear(year) {
   });
 
   const easter = easterSunday(year);
+  const easterDate = new Date(Date.UTC(year, easter.month - 1, easter.day));
   map.set(iso(year, easter.month, easter.day), 'Pasqua');
 
-  const monday = new Date(Date.UTC(year, easter.month - 1, easter.day + 1));
+  const monday = new Date(easterDate.getTime() + 24 * 60 * 60 * 1000);
   map.set(
     iso(monday.getUTCFullYear(), monday.getUTCMonth() + 1, monday.getUTCDate()),
     "Lunedì dell'Angelo"
   );
 
-  holidayCache.set(year, map);
+  cache.set(year, map);
   return map;
 }
 
+// Nome della festività per 'YYYY-MM-DD', oppure null.
 export function holidayName(date) {
-  return holidaysForYear(Number(date.slice(0, 4))).get(date) || null;
+  const year = Number(date.slice(0, 4));
+  return holidaysForYear(year).get(date) || null;
 }
 
-export function currentMonth() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+export function isWeekend(date) {
+  const dow = new Date(`${date}T00:00:00Z`).getUTCDay();
+  return dow === 0 || dow === 6;
 }
 
-export function monthLabel(month) {
+// Giorno lavorativo = lun-ven e non festivo.
+export function isWorkingDay(date) {
+  return !isWeekend(date) && !holidayName(date);
+}
+
+const WEEKDAYS_IT = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+
+// Tutti i giorni del mese 'YYYY-MM' con la loro natura.
+export function monthDays(month) {
   const [year, m] = month.split('-').map(Number);
-  const names = [
-    'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
-    'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre',
-  ];
-  return `${names[m - 1]} ${year}`;
-}
-
-export function shiftMonth(month, delta) {
-  const [year, m] = month.split('-').map(Number);
-  const d = new Date(year, m - 1 + delta, 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
-
-// Returns array of { date, weekday, isWeekend, holiday, isWorkingDay } for the month
-export function daysInMonth(month) {
-  const [year, m] = month.split('-').map(Number);
-  const total = new Date(year, m, 0).getDate();
+  const total = new Date(Date.UTC(year, m, 0)).getUTCDate();
   const days = [];
-  const weekdays = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
   for (let day = 1; day <= total; day += 1) {
-    const dow = new Date(year, m - 1, day).getDay();
     const date = iso(year, m, day);
     const holiday = holidayName(date);
-    const isWeekend = dow === 0 || dow === 6;
     days.push({
       date,
-      weekday: weekdays[dow],
-      isWeekend,
+      weekday: WEEKDAYS_IT[new Date(`${date}T00:00:00Z`).getUTCDay()],
+      isWeekend: isWeekend(date),
       holiday,
-      isWorkingDay: !isWeekend && !holiday,
+      isWorkingDay: !isWeekend(date) && !holiday,
     });
   }
   return days;
+}
+
+// Numero di giorni lavorativi attesi nel mese.
+export function workingDaysInMonth(month) {
+  return monthDays(month).filter((d) => d.isWorkingDay).length;
 }

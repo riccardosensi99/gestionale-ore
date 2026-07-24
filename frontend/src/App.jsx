@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext.jsx';
+import { applyTheme, currentTheme } from './lib/theme.js';
 import Login from './pages/Login.jsx';
 import MonthView from './pages/MonthView.jsx';
 import Backoffice from './pages/Backoffice.jsx';
@@ -7,6 +9,23 @@ import Backoffice from './pages/Backoffice.jsx';
 function initials(user) {
   const parts = (user?.name || user?.email || '').split(/[\s.@_-]+/).filter(Boolean);
   return parts.slice(0, 2).map((p) => p[0].toUpperCase()).join('') || '?';
+}
+
+function ThemeToggle() {
+  const [theme, setTheme] = useState(currentTheme);
+
+  const toggle = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    applyTheme(next);
+    setTheme(next);
+  };
+
+  return (
+    <button className="theme-toggle" onClick={toggle}>
+      <span className="icon">{theme === 'dark' ? '☀' : '☾'}</span>
+      {theme === 'dark' ? 'Tema chiaro' : 'Tema scuro'}
+    </button>
+  );
 }
 
 function Sidebar() {
@@ -32,6 +51,8 @@ function Sidebar() {
           {item.label}
         </Link>
       ))}
+
+      <ThemeToggle />
 
       <div className="profile">
         <span className="avatar">{initials(user)}</span>

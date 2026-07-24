@@ -63,6 +63,31 @@ frontend/   App React (login, vista mese, backoffice)
 docker-compose.yml
 ```
 
+## Accesso consentito (whitelist)
+
+Di default chiunque abbia un account Google può entrare. Per limitare l'accesso,
+imposta in `.env`:
+
+```
+ALLOWED_EMAILS=mario@azienda.it,@azienda.it
+```
+
+Accetta email singole o interi domini (`@azienda.it`). Chi non è in elenco viene
+respinto **prima** che l'utente venga creato a database, e vede un messaggio
+dedicato nella pagina di login. Lista vuota = nessuna restrizione.
+
+## Calendario e ore
+
+- I giorni lavorativi seguono il calendario italiano: lunedì–venerdì, escluse le
+  festività nazionali (comprese Pasqua e Lunedì dell'Angelo, calcolati per anno).
+- Alla **prima** registrazione di ore in un mese, lo stesso orario viene
+  replicato su tutti gli altri giorni lavorativi ancora vuoti. L'operazione è
+  annullabile dal banner che compare subito dopo.
+- Il PDF riporta **tutti** i giorni del mese: i giorni non registrati sono
+  qualificati come *Riposo*, *Festività* o *Non registrato*.
+- Il tema chiaro/scuro si cambia dalla sidebar e segue le preferenze di sistema
+  al primo accesso.
+
 ## Ruoli
 
 - **user**: vede e modifica solo le proprie ore.
@@ -79,6 +104,8 @@ docker-compose.yml
 | POST | `/auth/logout` | Logout |
 | GET | `/entries?month=YYYY-MM` | Registrazioni del mese |
 | POST | `/entries` | Crea/aggiorna registrazione del giorno |
+| POST | `/entries/bulk` | Crea/aggiorna più giorni in transazione |
+| DELETE | `/entries/bulk` | Annulla una precompilazione |
 | PUT/DELETE | `/entries/:id` | Modifica/elimina |
 | GET | `/summary?month=YYYY-MM` | Riepilogo mensile |
 | GET | `/export/pdf?month=YYYY-MM` | PDF del mese |

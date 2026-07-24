@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import passport from 'passport';
-import { config, isProd } from '../config.js';
+import { config, isProd, isEmailAllowed } from '../config.js';
 import { signToken, requireAuth } from '../middleware/auth.js';
 import { query } from '../db/pool.js';
 
@@ -18,18 +18,18 @@ router.get(
   passport.authenticate('google', { scope: ['profile', 'email'], session: false })
 );
 
-router.get(
-  '/google/callback',
-  passport.authenticate('google', {
-    session: false,
-    failureRedirect: `${config.frontendUrl}/login?error=auth`,
-  }),
-  (req, res) => {
-    const token = signToken(req.user);
+router.get('/google/callback', (req, res, next) => {
+  passport.authenticate('google', { session: false }, (err, user, info) => {
+    if (err) return next(err);
+    if (!user) {
+      const reason = info?.reason === 'not_allowed' ? 'not_allowed' : 'auth';
+      return res.redirect(`${config.frontendUrl}/login?error=${reason}`);
+    }
+    const token = signToken(user);
     res.cookie('token', token, cookieOptions);
-    res.redirect(config.frontendUrl);
-  }
-);
+    return res.redirect(config.frontendUrl);
+  })(req, res, next);
+});
 
 // Indica al frontend se il login di sviluppo è disponibile
 router.get('/config', (req, res) => {
@@ -44,6 +44,9 @@ router.post('/dev-login', async (req, res, next) => {
   }
   try {
     const email = String(req.body?.email || 'dev@example.com').toLowerCase();
+    if (!isEmailAllowed(email)) {
+      return res.status(403).json({ error: 'Email non autorizzata ad accedere' });
+    }
     const name = req.body?.name || 'Utente Dev';
     const role = config.adminEmails.includes(email) || req.body?.admin ? 'admin' : 'user';
     const { rows } = await query(

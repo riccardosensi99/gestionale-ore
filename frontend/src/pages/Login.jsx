@@ -17,9 +17,13 @@ export default function Login() {
   const [email, setEmail] = useState('dev@example.com');
   const [admin, setAdmin] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [devError, setDevError] = useState(null);
 
   const params = new URLSearchParams(window.location.search);
-  const error = params.get('error');
+  const errorMessage = {
+    auth: 'Autenticazione fallita, riprova.',
+    not_allowed: 'Questa email non è autorizzata ad accedere. Contatta l’amministratore.',
+  }[params.get('error')];
 
   useEffect(() => {
     api.get('/auth/config').then(({ data }) => setDevEnabled(data.devLogin)).catch(() => {});
@@ -28,9 +32,12 @@ export default function Login() {
   const devLogin = async (e) => {
     e.preventDefault();
     setSubmitting(true);
+    setDevError(null);
     try {
       await api.post('/auth/dev-login', { email, admin });
       await refresh();
+    } catch (err) {
+      setDevError(err.response?.data?.error || 'Login di sviluppo fallito.');
     } finally {
       setSubmitting(false);
     }
@@ -78,7 +85,7 @@ export default function Login() {
         <div className="login-card">
           <h1>Bentornato</h1>
           <p className="subtitle">Accedi per registrare le tue ore di lavoro.</p>
-          {error && <p className="error">Autenticazione fallita, riprova.</p>}
+          {errorMessage && <p className="error">{errorMessage}</p>}
 
           <a className="gsi-material-button" href={`${API_URL}/auth/google`}>
             <div className="gsi-material-button-state" />
@@ -116,6 +123,8 @@ export default function Login() {
                 <input type="checkbox" checked={admin} onChange={(e) => setAdmin(e.target.checked)} />
                 Entra come admin
               </label>
+
+              {devError && <p className="error">{devError}</p>}
 
               <button className="btn secondary block" type="submit" disabled={submitting}>
                 {submitting ? 'Accesso…' : 'Login di sviluppo'}

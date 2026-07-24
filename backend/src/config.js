@@ -21,8 +21,25 @@ export const config = {
     .split(',')
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean),
+  // Email (o domini, es. "@azienda.it") autorizzati ad accedere.
+  // Lista vuota = nessuna restrizione.
+  allowedEmails: (process.env.ALLOWED_EMAILS || '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean),
   // Login di sviluppo (bypass Google). MAI attivo in produzione.
   devLogin: process.env.DEV_LOGIN === 'true' && process.env.NODE_ENV !== 'production',
 };
 
 export const isProd = config.env === 'production';
+
+// True se l'email può accedere. Con whitelist vuota passano tutti.
+// Le voci che iniziano con "@" valgono per l'intero dominio.
+export function isEmailAllowed(email) {
+  if (!config.allowedEmails.length) return true;
+  const normalized = String(email || '').trim().toLowerCase();
+  if (!normalized) return false;
+  return config.allowedEmails.some((entry) =>
+    entry.startsWith('@') ? normalized.endsWith(entry) : normalized === entry
+  );
+}

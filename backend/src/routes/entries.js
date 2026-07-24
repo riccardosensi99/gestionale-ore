@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { query } from '../db/pool.js';
+import { pool, query } from '../db/pool.js';
 import { requireAuth } from '../middleware/auth.js';
 import { getEntries } from '../services/summary.js';
 
@@ -59,6 +59,66 @@ router.post('/', async (req, res, next) => {
       [req.user.id, date, type, hours, note]
     );
     res.status(201).json({ entry: rows[0] });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /entries/bulk  — upsert di più giorni in un'unica transazione.
+// Usato dalla precompilazione del mese: o passano tutti i giorni o nessuno.
+router.post('/bulk', async (req, res, next) => {
+  const items = req.body?.entries;
+  if (!Array.isArray(items) || !items.length) {
+    return res.status(400).json({ error: 'Nessuna registrazione da salvare' });
+  }
+  if (items.length > 31) {
+    return res.status(400).json({ error: 'Troppe registrazioni (max 31)' });
+  }
+  for (const item of items) {
+    const error = validateBody(item);
+    if (error) return res.status(400).json({ error: `${item.date || '?'}: ${error}` });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const saved = [];
+    for (const { date, type, hours = 0, note = null } of items) {
+      const { rows } = await client.query(
+        `INSERT INTO time_entries (user_id, entry_date, type, hours, note)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (user_id, entry_date) DO UPDATE
+           SET type = EXCLUDED.type,
+               hours = EXCLUDED.hours,
+               note = EXCLUDED.note,
+               updated_at = now()
+         RETURNING id, entry_date, type, hours, note`,
+        [req.user.id, date, type, hours, note]
+      );
+      saved.push(rows[0]);
+    }
+    await client.query('COMMIT');
+    res.status(201).json({ entries: saved });
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    next(err);
+  } finally {
+    client.release();
+  }
+});
+
+// DELETE /entries/bulk  — annulla una precompilazione appena eseguita.
+router.delete('/bulk', async (req, res, next) => {
+  try {
+    const ids = req.body?.ids;
+    if (!Array.isArray(ids) || !ids.length) {
+      return res.status(400).json({ error: 'Nessun id da eliminare' });
+    }
+    const { rowCount } = await query(
+      `DELETE FROM time_entries WHERE user_id = $1 AND id = ANY($2::int[])`,
+      [req.user.id, ids.map(Number)]
+    );
+    res.json({ deleted: rowCount });
   } catch (err) {
     next(err);
   }

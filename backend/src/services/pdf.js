@@ -1,4 +1,5 @@
 import PDFDocument from 'pdfkit';
+import { monthDays } from './calendar.js';
 
 const TYPE_LABELS = {
   worked: 'Lavorato',
@@ -32,6 +33,7 @@ export function streamMonthlyPdf(res, { user, month, summary, entries }) {
   doc.fontSize(14).text('Riepilogo', { underline: true });
   doc.moveDown(0.5);
   const summaryRows = [
+    ['Giorni lavorativi del mese', String(summary.expectedWorkingDays ?? '-')],
     ['Giorni lavorati', String(summary.workedDays)],
     ['Totale ore', String(summary.totalHours)],
     ['Giorni di ferie', String(summary.vacationDays)],
@@ -67,25 +69,40 @@ export function streamMonthlyPdf(res, { user, month, summary, entries }) {
     doc.y = y + rowH;
   };
 
+  // Il dettaglio copre tutti i giorni del mese: i giorni senza registrazione
+  // vengono qualificati (riposo, festività) invece di sparire dal prospetto.
+  const byDate = new Map(
+    entries.map((e) => [String(e.entry_date).slice(0, 10), e])
+  );
+
   drawRow(headers, true);
-  if (!entries.length) {
-    doc.moveDown(0.5).fontSize(10).fillColor('#888')
-      .text('Nessuna registrazione per il mese selezionato.');
-    doc.fillColor('#000');
-  } else {
-    entries.forEach((e) => {
-      if (doc.y > 760) {
-        doc.addPage();
-        drawRow(headers, true);
-      }
+  monthDays(month).forEach((day) => {
+    if (doc.y > 760) {
+      doc.addPage();
+      drawRow(headers, true);
+    }
+
+    const entry = byDate.get(day.date);
+    const label = `${day.weekday} ${day.date.slice(8)}`;
+
+    if (entry) {
       drawRow([
-        String(e.entry_date).slice(0, 10),
-        TYPE_LABELS[e.type] || e.type,
-        e.type === 'worked' ? e.hours : '-',
-        e.note || '',
+        label,
+        TYPE_LABELS[entry.type] || entry.type,
+        entry.type === 'worked' ? entry.hours : '-',
+        entry.note || (day.holiday ?? ''),
       ]);
-    });
-  }
+      return;
+    }
+
+    let type = 'Non registrato';
+    if (day.holiday) type = `Festività — ${day.holiday}`;
+    else if (day.isWeekend) type = 'Riposo';
+
+    doc.fillColor(day.isWorkingDay ? '#b45309' : '#888');
+    drawRow([label, type, '-', '']);
+    doc.fillColor('#000');
+  });
 
   doc.moveDown(2).fontSize(8).fillColor('#999')
     .text(`Generato il ${new Date().toLocaleDateString('it-IT')}`, { align: 'right' });

@@ -1,4 +1,5 @@
 import { query } from '../db/pool.js';
+import { workingDaysInMonth } from './calendar.js';
 
 // month = 'YYYY-MM'
 export function monthRange(month) {
@@ -36,6 +37,8 @@ export async function getSummary(userId, month) {
   const r = rows[0];
   return {
     month,
+    // Giorni lavorativi attesi da calendario (lun-ven, festività escluse).
+    expectedWorkingDays: workingDaysInMonth(month),
     workedDays: Number(r.worked_days),
     totalHours: Number(r.total_hours),
     vacationDays: Number(r.vacation_days),
