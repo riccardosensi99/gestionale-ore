@@ -21,6 +21,8 @@ export const config = {
     .split(',')
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean),
+  // Login di sviluppo (bypass Google). MAI attivo in produzione.
+  devLogin: process.env.DEV_LOGIN === 'true' && process.env.NODE_ENV !== 'production',
 };
 
 export const isProd = config.env === 'production';
