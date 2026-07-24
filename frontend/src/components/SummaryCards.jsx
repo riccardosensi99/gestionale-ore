@@ -1,14 +1,17 @@
 export default function SummaryCards({ summary }) {
   const cards = [
-    { label: 'Giorni lavorati', value: summary?.workedDays ?? 0 },
-    { label: 'Totale ore', value: summary?.totalHours ?? 0 },
-    { label: 'Giorni di ferie', value: summary?.vacationDays ?? 0 },
+    { label: 'Giorni lavorati', value: summary?.workedDays ?? 0, tile: 'G', tone: '' },
+    { label: 'Totale ore', value: summary?.totalHours ?? 0, tile: 'O', tone: 'purple' },
+    { label: 'Giorni di ferie', value: summary?.vacationDays ?? 0, tile: 'F', tone: 'green' },
   ];
   return (
     <div className="cards">
       {cards.map((c) => (
-        <div className="card" key={c.label}>
-          <div className="label">{c.label}</div>
+        <div className="kpi" key={c.label}>
+          <div className="head">
+            <span className={`tile ${c.tone}`}>{c.tile}</span>
+            <span className="label">{c.label}</span>
+          </div>
           <div className="value">{c.value}</div>
         </div>
       ))}

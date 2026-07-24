@@ -72,93 +72,111 @@ export default function MonthView() {
   const days = daysInMonth(month);
 
   return (
-    <div className="container">
+    <>
+      <header className="page-head">
+        <div>
+          <h1>Le mie ore</h1>
+          <p className="subtitle">Registra e monitora il tempo dedicato al tuo lavoro.</p>
+        </div>
+        <div className="toolbar">
+          <div className="date-filter">
+            <button title="Mese precedente" onClick={() => setMonth((m) => shiftMonth(m, -1))}>‹</button>
+            <span className="current">{monthLabel(month)}</span>
+            <button title="Mese successivo" onClick={() => setMonth((m) => shiftMonth(m, 1))}>›</button>
+          </div>
+          <button className="btn secondary" onClick={() => setMonth(currentMonth())}>Oggi</button>
+          <a className="btn" href={`${API_URL}/export/pdf?month=${month}`} target="_blank" rel="noreferrer">
+            ⬇ Esporta PDF
+          </a>
+        </div>
+      </header>
+
       <SummaryCards summary={summary} />
 
-      <div className="toolbar">
-        <button className="btn secondary" onClick={() => setMonth((m) => shiftMonth(m, -1))}>← Mese prec.</button>
-        <strong style={{ minWidth: 160, textAlign: 'center' }}>{monthLabel(month)}</strong>
-        <button className="btn secondary" onClick={() => setMonth((m) => shiftMonth(m, 1))}>Mese succ. →</button>
-        <button className="btn secondary" onClick={() => setMonth(currentMonth())}>Oggi</button>
-        <a className="btn" href={`${API_URL}/export/pdf?month=${month}`} target="_blank" rel="noreferrer">
-          ⬇ Esporta PDF
-        </a>
-      </div>
+      <section className="section panel">
+        <div className="panel-head">
+          <div>
+            <h2>Registro del mese</h2>
+            <p className="subtitle">Imposta tipo, ore e nota per ogni giorno.</p>
+          </div>
+        </div>
 
-      {error && <p style={{ color: '#dc2626' }}>{error}</p>}
-      {loading ? (
-        <p>Caricamento…</p>
-      ) : (
-        <table>
-          <thead>
-            <tr>
-              <th style={{ width: 130 }}>Giorno</th>
-              <th style={{ width: 180 }}>Tipo</th>
-              <th style={{ width: 100 }}>Ore</th>
-              <th>Nota</th>
-              <th style={{ width: 60 }}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {days.map((d) => {
-              const entry = entries[d.date];
-              return (
-                <tr key={d.date} style={d.isWeekend ? { background: '#fafafa' } : undefined}>
-                  <td>
-                    {d.weekday} {d.date.slice(8)}
-                  </td>
-                  <td>
-                    <select
-                      value={entry?.type || ''}
-                      onChange={(ev) =>
-                        ev.target.value
-                          ? saveDay(d.date, { type: ev.target.value })
-                          : clearDay(d.date)
-                      }
-                    >
-                      <option value="">—</option>
-                      {Object.entries(TYPE_LABELS).map(([k, v]) => (
-                        <option key={k} value={k}>{v}</option>
-                      ))}
-                    </select>
-                  </td>
-                  <td>
-                    <input
-                      type="number"
-                      min="0"
-                      max="24"
-                      step="0.5"
-                      style={{ width: 70 }}
-                      disabled={!entry || entry.type !== 'worked'}
-                      value={entry?.type === 'worked' ? entry.hours : ''}
-                      onChange={(ev) =>
-                        saveDay(d.date, { hours: Number(ev.target.value) })
-                      }
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      style={{ width: '100%' }}
-                      placeholder="Nota…"
-                      disabled={!entry}
-                      defaultValue={entry?.note || ''}
-                      onBlur={(ev) =>
-                        entry && saveDay(d.date, { note: ev.target.value })
-                      }
-                    />
-                  </td>
-                  <td>
-                    {entry && (
-                      <button className="btn ghost" title="Cancella" onClick={() => clearDay(d.date)}>✕</button>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      )}
-    </div>
+        {error && <p className="panel-body" style={{ color: 'var(--danger)' }}>{error}</p>}
+        {loading ? (
+          <p className="panel-body">Caricamento…</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th style={{ width: 130 }}>Giorno</th>
+                <th style={{ width: 200 }}>Tipo</th>
+                <th style={{ width: 120 }}>Ore</th>
+                <th>Nota</th>
+                <th style={{ width: 60 }} />
+              </tr>
+            </thead>
+            <tbody>
+              {days.map((d) => {
+                const entry = entries[d.date];
+                return (
+                  <tr key={d.date} className={d.isWeekend ? 'weekend' : undefined}>
+                    <td>
+                      <span className="cell-strong">{d.weekday} {d.date.slice(8)}</span>
+                    </td>
+                    <td>
+                      <select
+                        className="table-input"
+                        value={entry?.type || ''}
+                        onChange={(ev) =>
+                          ev.target.value
+                            ? saveDay(d.date, { type: ev.target.value })
+                            : clearDay(d.date)
+                        }
+                      >
+                        <option value="">—</option>
+                        {Object.entries(TYPE_LABELS).map(([k, v]) => (
+                          <option key={k} value={k}>{v}</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td>
+                      <input
+                        className="table-input hours"
+                        type="number"
+                        min="0"
+                        max="24"
+                        step="0.5"
+                        disabled={!entry || entry.type !== 'worked'}
+                        value={entry?.type === 'worked' ? entry.hours : ''}
+                        onChange={(ev) =>
+                          saveDay(d.date, { hours: Number(ev.target.value) })
+                        }
+                      />
+                    </td>
+                    <td>
+                      <input
+                        className="table-input note"
+                        type="text"
+                        placeholder="Nota…"
+                        disabled={!entry}
+                        defaultValue={entry?.note || ''}
+                        onBlur={(ev) =>
+                          entry && saveDay(d.date, { note: ev.target.value })
+                        }
+                      />
+                    </td>
+                    <td>
+                      {entry && (
+                        <button className="btn ghost" title="Cancella" onClick={() => clearDay(d.date)}>✕</button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </section>
+    </>
   );
 }

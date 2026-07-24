@@ -24,73 +24,108 @@ export default function Backoffice() {
       .then(({ data }) => setDetail(data));
   }, [selected, month]);
 
-  if (loading) return <div className="container">Caricamento…</div>;
+  if (loading) return <div className="center">Caricamento…</div>;
 
   return (
-    <div className="container">
-      <h2>Backoffice — Utenti</h2>
-      <table>
-        <thead>
-          <tr><th>Nome</th><th>Email</th><th>Ruolo</th><th></th></tr>
-        </thead>
-        <tbody>
-          {users.map((u) => (
-            <tr key={u.id}>
-              <td>{u.name || '—'}</td>
-              <td>{u.email}</td>
-              <td>{u.role}</td>
-              <td>
-                <button className="btn secondary" onClick={() => { setSelected(u); setDetail(null); }}>
-                  Vedi ore
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <>
+      <header className="page-head">
+        <div>
+          <h1>Backoffice</h1>
+          <p className="subtitle">Consulta ed esporta le ore registrate da ogni dipendente.</p>
+        </div>
+      </header>
+
+      <section className="panel">
+        <div className="panel-head">
+          <div>
+            <h2>Utenti</h2>
+            <p className="subtitle">{users.length} account registrati</p>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Nome</th><th>Email</th><th>Ruolo</th><th /></tr>
+          </thead>
+          <tbody>
+            {users.map((u) => (
+              <tr key={u.id}>
+                <td>
+                  <span className="cell-strong">{u.name || '—'}</span>
+                </td>
+                <td>{u.email}</td>
+                <td>
+                  <span className={`badge ${u.role === 'admin' ? 'worked' : 'vacation'}`}>
+                    {u.role === 'admin' ? 'Amministratore' : 'Dipendente'}
+                  </span>
+                </td>
+                <td>
+                  <button className="btn secondary" onClick={() => { setSelected(u); setDetail(null); }}>
+                    Vedi ore
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
 
       {selected && (
-        <div style={{ marginTop: 32 }}>
-          <h3>{selected.name || selected.email}</h3>
-          <div className="toolbar">
-            <button className="btn secondary" onClick={() => setMonth((m) => shiftMonth(m, -1))}>←</button>
-            <strong style={{ minWidth: 160, textAlign: 'center' }}>{monthLabel(month)}</strong>
-            <button className="btn secondary" onClick={() => setMonth((m) => shiftMonth(m, 1))}>→</button>
-            <a
-              className="btn"
-              href={`${API_URL}/export/pdf?month=${month}&userId=${selected.id}&name=${encodeURIComponent(selected.name || '')}&email=${encodeURIComponent(selected.email)}`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              ⬇ Esporta PDF
-            </a>
+        <section className="section">
+          <div className="page-head">
+            <div>
+              <h1 style={{ fontSize: 22 }}>{selected.name || selected.email}</h1>
+              <p className="subtitle">{selected.email}</p>
+            </div>
+            <div className="toolbar">
+              <div className="date-filter">
+                <button title="Mese precedente" onClick={() => setMonth((m) => shiftMonth(m, -1))}>‹</button>
+                <span className="current">{monthLabel(month)}</span>
+                <button title="Mese successivo" onClick={() => setMonth((m) => shiftMonth(m, 1))}>›</button>
+              </div>
+              <a
+                className="btn"
+                href={`${API_URL}/export/pdf?month=${month}&userId=${selected.id}&name=${encodeURIComponent(selected.name || '')}&email=${encodeURIComponent(selected.email)}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                ⬇ Esporta PDF
+              </a>
+            </div>
           </div>
 
           {detail && (
             <>
               <SummaryCards summary={detail.summary} />
-              <table style={{ marginTop: 16 }}>
-                <thead>
-                  <tr><th>Data</th><th>Tipo</th><th>Ore</th><th>Nota</th></tr>
-                </thead>
-                <tbody>
-                  {detail.entries.length === 0 && (
-                    <tr><td colSpan="4" style={{ color: 'var(--muted)' }}>Nessuna registrazione.</td></tr>
-                  )}
-                  {detail.entries.map((e) => (
-                    <tr key={e.id}>
-                      <td>{String(e.entry_date).slice(0, 10)}</td>
-                      <td><span className={`badge ${e.type}`}>{TYPE_LABELS[e.type]}</span></td>
-                      <td>{e.type === 'worked' ? e.hours : '—'}</td>
-                      <td>{e.note || ''}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="section panel">
+                <div className="panel-head">
+                  <div>
+                    <h2>Registrazioni</h2>
+                    <p className="subtitle">Dettaglio del mese selezionato</p>
+                  </div>
+                </div>
+                <table>
+                  <thead>
+                    <tr><th>Data</th><th>Tipo</th><th>Ore</th><th>Nota</th></tr>
+                  </thead>
+                  <tbody>
+                    {detail.entries.length === 0 && (
+                      <tr><td className="empty-row" colSpan="4">Nessuna registrazione.</td></tr>
+                    )}
+                    {detail.entries.map((e) => (
+                      <tr key={e.id}>
+                        <td><span className="cell-strong">{String(e.entry_date).slice(0, 10)}</span></td>
+                        <td><span className={`badge ${e.type}`}>{TYPE_LABELS[e.type]}</span></td>
+                        <td>{e.type === 'worked' ? e.hours : '—'}</td>
+                        <td>{e.note || ''}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </>
           )}
-        </div>
+        </section>
       )}
-    </div>
+    </>
   );
 }
