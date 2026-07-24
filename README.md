@@ -43,6 +43,18 @@ backoffice per l'amministratore.
    docker compose exec backend npm run seed
    ```
 
+## Login di sviluppo (senza Google)
+
+Per provare l'app in locale senza configurare Google OAuth, imposta in `.env`:
+
+```
+DEV_LOGIN=true
+```
+
+Nella pagina di login comparirà un riquadro **"Login di sviluppo"**: inserisci una
+email qualsiasi e scegli se entrare come admin. Il flag è ignorato quando
+`NODE_ENV=production`, quindi non è utilizzabile in produzione.
+
 ## Struttura
 
 ```
