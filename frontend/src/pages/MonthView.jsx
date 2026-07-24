@@ -3,6 +3,7 @@ import { api, API_URL } from '../api/client.js';
 import SummaryCards from '../components/SummaryCards.jsx';
 import {
   TYPE_LABELS,
+  defaultTypeFor,
   currentMonth,
   monthLabel,
   shiftMonth,
@@ -10,13 +11,18 @@ import {
 } from '../lib/dates.js';
 
 export default function MonthView() {
-  const [month, setMonth] = useState(currentMonth());
+  // Il recap linka un mese specifico con ?month=YYYY-MM
+  const [month, setMonth] = useState(
+    () => new URLSearchParams(window.location.search).get('month') || currentMonth()
+  );
   const [entries, setEntries] = useState({});
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  // Ids creati dall'ultima precompilazione automatica, per poterla annullare.
+  // Ids creati dall'ultima precompilazione, per poterla annullare.
   const [prefilled, setPrefilled] = useState(null);
+  // Richiesta di conferma prima di replicare le ore sul resto del mese.
+  const [askPrefill, setAskPrefill] = useState(null);
 
   const days = daysInMonth(month);
 
@@ -29,6 +35,7 @@ export default function MonthView() {
     setLoading(true);
     setError(null);
     setPrefilled(null);
+    setAskPrefill(null);
     try {
       const [e, s] = await Promise.all([
         api.get('/entries', { params: { month } }),
@@ -51,8 +58,8 @@ export default function MonthView() {
     load();
   }, [load]);
 
-  // Alla prima registrazione di ore del mese, replica lo stesso orario su tutti
-  // gli altri giorni lavorativi ancora vuoti (weekend e festività esclusi).
+  // Su richiesta, replica lo stesso orario su tutti gli altri giorni lavorativi
+  // ancora vuoti del mese (weekend e festività esclusi).
   const prefillMonth = async (fromDate, hours) => {
     const targets = days
       .filter((d) => d.isWorkingDay && d.date !== fromDate && !entries[d.date])
@@ -85,24 +92,28 @@ export default function MonthView() {
     await refreshSummary();
   };
 
-  const saveDay = async (date, patch) => {
+  const saveDay = async (date, patch, day) => {
     const existing = entries[date] || {};
     const wasEmpty = Object.keys(entries).length === 0;
     const payload = {
       date,
-      type: patch.type ?? existing.type ?? 'worked',
+      type: patch.type ?? existing.type ?? defaultTypeFor(day),
       hours: patch.hours ?? existing.hours ?? 0,
       note: patch.note ?? existing.note ?? '',
     };
     // Se non c'è tipo e nessun valore, non salvare
     const { data } = await api.post('/entries', payload);
     setEntries((prev) => ({ ...prev, [date]: data.entry }));
-
-    if (wasEmpty && payload.type === 'worked' && Number(payload.hours) > 0) {
-      await prefillMonth(date, Number(payload.hours));
-      return;
-    }
     await refreshSummary();
+
+    // Prima registrazione di ore del mese: chiedi se replicarle sugli altri
+    // giorni lavorativi, invece di deciderlo al posto dell'utente.
+    if (wasEmpty && payload.type === 'worked' && Number(payload.hours) > 0) {
+      const targets = days.filter(
+        (d) => d.isWorkingDay && d.date !== date && !entries[d.date]
+      ).length;
+      if (targets) setAskPrefill({ date, hours: Number(payload.hours), targets });
+    }
   };
 
   const clearDay = async (date) => {
@@ -149,6 +160,35 @@ export default function MonthView() {
         </div>
       )}
 
+      {askPrefill && (
+        <div className="modal-backdrop" onClick={() => setAskPrefill(null)}>
+          <div className="modal" onClick={(ev) => ev.stopPropagation()}>
+            <h2>Applicare {askPrefill.hours}h a tutto il mese?</h2>
+            <p>
+              Posso registrare {askPrefill.hours} ore anche sugli altri{' '}
+              {askPrefill.targets} giorni lavorativi ancora vuoti di{' '}
+              {monthLabel(month).toLowerCase()}. Weekend e festività restano esclusi
+              e potrai modificare ogni giorno singolarmente.
+            </p>
+            <div className="modal-actions">
+              <button className="btn secondary" onClick={() => setAskPrefill(null)}>
+                No, solo questo giorno
+              </button>
+              <button
+                className="btn"
+                onClick={async () => {
+                  const { date, hours } = askPrefill;
+                  setAskPrefill(null);
+                  await prefillMonth(date, hours);
+                }}
+              >
+                Sì, applica a tutti
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <section className="section panel">
         <div className="panel-head">
           <div>
@@ -174,6 +214,9 @@ export default function MonthView() {
             <tbody>
               {days.map((d) => {
                 const entry = entries[d.date];
+                // Senza registrazione vale il tipo proposto dal calendario:
+                // lavorato dal lunedì al venerdì, riposo nel weekend e nei festivi.
+                const type = entry?.type ?? defaultTypeFor(d);
                 return (
                   <tr key={d.date} className={d.isWorkingDay ? undefined : 'weekend'}>
                     <td>
@@ -182,18 +225,18 @@ export default function MonthView() {
                     </td>
                     <td>
                       <select
-                        className="table-input"
-                        value={entry?.type || ''}
+                        className={`table-input${entry ? '' : ' proposed'}`}
+                        value={type}
                         onChange={(ev) =>
                           ev.target.value
-                            ? saveDay(d.date, { type: ev.target.value })
+                            ? saveDay(d.date, { type: ev.target.value }, d)
                             : clearDay(d.date)
                         }
                       >
-                        <option value="">—</option>
                         {Object.entries(TYPE_LABELS).map(([k, v]) => (
                           <option key={k} value={k}>{v}</option>
                         ))}
+                        {entry && <option value="">— Nessuna registrazione</option>}
                       </select>
                     </td>
                     <td>
@@ -203,10 +246,11 @@ export default function MonthView() {
                         min="0"
                         max="24"
                         step="0.5"
-                        disabled={!entry || entry.type !== 'worked'}
+                        disabled={type !== 'worked'}
                         value={entry?.type === 'worked' ? entry.hours : ''}
+                        placeholder="0"
                         onChange={(ev) =>
-                          saveDay(d.date, { hours: Number(ev.target.value) })
+                          saveDay(d.date, { hours: Number(ev.target.value) }, d)
                         }
                       />
                     </td>
@@ -218,7 +262,7 @@ export default function MonthView() {
                         disabled={!entry}
                         defaultValue={entry?.note || ''}
                         onBlur={(ev) =>
-                          entry && saveDay(d.date, { note: ev.target.value })
+                          entry && saveDay(d.date, { note: ev.target.value }, d)
                         }
                       />
                     </td>

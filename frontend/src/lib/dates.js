@@ -2,7 +2,14 @@ export const TYPE_LABELS = {
   worked: 'Lavorato',
   vacation: 'Ferie',
   sick: 'Malattia/Permesso',
+  rest: 'Riposo',
 };
+
+// Tipo proposto per un giorno non ancora registrato: si lavora dal lunedì al
+// venerdì, weekend e festività sono riposo.
+export function defaultTypeFor(day) {
+  return day.isWorkingDay ? 'worked' : 'rest';
+}
 
 // Calendario lavorativo italiano: lunedì-venerdì, escluse le festività nazionali.
 //

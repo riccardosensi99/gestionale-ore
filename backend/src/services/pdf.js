@@ -5,6 +5,7 @@ const TYPE_LABELS = {
   worked: 'Lavorato',
   vacation: 'Ferie',
   sick: 'Malattia/Permesso',
+  rest: 'Riposo',
 };
 
 const MONTHS_IT = [

@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext.jsx';
 import { applyTheme, currentTheme } from './lib/theme.js';
+import Logo from './components/Logo.jsx';
 import Login from './pages/Login.jsx';
 import MonthView from './pages/MonthView.jsx';
+import Recap from './pages/Recap.jsx';
 import Backoffice from './pages/Backoffice.jsx';
 
 function initials(user) {
@@ -34,13 +36,14 @@ function Sidebar() {
 
   const items = [
     { to: '/', icon: '◷', label: 'Le mie ore' },
+    { to: '/recap', icon: '▤', label: 'Recap mensile' },
     ...(user.role === 'admin' ? [{ to: '/backoffice', icon: '♙', label: 'Backoffice' }] : []),
   ];
 
   return (
     <aside className="sidebar">
       <div className="brand">
-        <span className="mark">T</span>
+        <Logo size={40} />
         <span className="name">Time Manager</span>
       </div>
 
@@ -86,6 +89,7 @@ export default function App() {
       <main className="app-main">
         <Routes>
           <Route path="/" element={<MonthView />} />
+          <Route path="/recap" element={<Recap />} />
           <Route
             path="/backoffice"
             element={user.role === 'admin' ? <Backoffice /> : <Navigate to="/" replace />}

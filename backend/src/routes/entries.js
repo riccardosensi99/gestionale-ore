@@ -4,7 +4,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { getEntries } from '../services/summary.js';
 
 const router = Router();
-const VALID_TYPES = ['worked', 'vacation', 'sick'];
+const VALID_TYPES = ['worked', 'vacation', 'sick', 'rest'];
 const MONTH_RE = /^\d{4}-\d{2}$/;
 
 router.use(requireAuth);

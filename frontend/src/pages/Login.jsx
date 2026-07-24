@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, API_URL } from '../api/client.js';
 import { useAuth } from '../auth/AuthContext.jsx';
+import Logo from '../components/Logo.jsx';
 
 // Anteprima decorativa dell'hero: valori d'esempio, come nel design.
 const PREVIEW_BARS = [
@@ -50,7 +51,7 @@ export default function Login() {
         <span className="glow glow-2" />
 
         <div className="brand">
-          <span className="mark">T</span>
+          <Logo size={44} />
           <span className="name">Time Manager</span>
         </div>
 

@@ -1,0 +1,15 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="150" height="150" viewBox="0 0 150 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Time Manager Mark" clip-path="url(#clip0_0_18)">
+<path id="Vector" d="M107.812 0H42.1875C18.888 0 0 18.888 0 42.1875V107.812C0 131.112 18.888 150 42.1875 150H107.812C131.112 150 150 131.112 150 107.812V42.1875C150 18.888 131.112 0 107.812 0Z" fill="#2563EB"/>
+<path id="Vector_2" d="M39.8438 46.875H100.781" stroke="white" stroke-width="14.0625" stroke-linecap="round"/>
+<path id="Vector_3" d="M70.3125 46.875V100.781" stroke="white" stroke-width="14.0625" stroke-linecap="round"/>
+<path id="Vector_4" d="M110.156 73.8281C110.156 93.8916 93.8916 110.156 73.8281 110.156C64.9779 110.156 56.8669 106.99 50.5645 101.728" stroke="white" stroke-width="9.375" stroke-linecap="round"/>
+<path id="Vector_5" d="M110.156 80.8594C114.04 80.8594 117.188 77.7114 117.188 73.8281C117.188 69.9449 114.04 66.7969 110.156 66.7969C106.273 66.7969 103.125 69.9449 103.125 73.8281C103.125 77.7114 106.273 80.8594 110.156 80.8594Z" fill="#7DD3FC"/>
+<path id="Vector_6" d="M73.8281 73.8281L93.75 60.9375" stroke="#7DD3FC" stroke-width="8.20312" stroke-linecap="round"/>
+</g>
+<defs>
+<clipPath id="clip0_0_18">
+<rect width="150" height="150" fill="white"/>
+</clipPath>
+</defs>
+</svg>

@@ -412,6 +412,69 @@ tbody tr.weekend { background: #fbfcfe; }
 td .cell-strong { font-weight: 500; }
 .empty-row { color: var(--muted); }
 
+/* Tipo solo proposto dal calendario, non ancora registrato a DB. */
+.table-input.proposed { color: var(--muted); border-style: dashed; }
+
+.logo-mark { display: block; flex-shrink: 0; }
+
+.section-title { font-size: 19px; font-weight: 600; }
+
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(254px, 1fr));
+  gap: 24px;
+  margin-top: 22px;
+}
+.month-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 17px;
+}
+.month-card .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.month-card h3 { font-size: 16px; font-weight: 600; }
+.month-card .hours { font-size: 27px; font-weight: 700; margin-top: 14px; letter-spacing: -0.01em; }
+.month-card .meta { font-size: 12px; color: var(--muted); margin-top: 8px; }
+.month-card .detail-link {
+  display: inline-block;
+  margin-top: 14px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--primary);
+}
+
+.recap-bottom {
+  display: grid;
+  grid-template-columns: minmax(0, 540fr) minmax(0, 572fr);
+  gap: 24px;
+  align-items: start;
+}
+.recap-bottom .bars { padding: 0; }
+.recap-bottom .bars .track { height: 142px; }
+.recap-bottom .bars .fill.alt { background: var(--purple); }
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 20, 41, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 10;
+}
+.modal {
+  background: var(--card);
+  border-radius: var(--r-2xl);
+  box-shadow: var(--shadow);
+  padding: 32px;
+  max-width: 460px;
+  width: 100%;
+}
+.modal h2 { font-size: 20px; font-weight: 600; }
+.modal p { font-size: 14px; color: var(--muted); line-height: 22px; margin: 12px 0 28px; }
+.modal-actions { display: flex; gap: 12px; justify-content: flex-end; flex-wrap: wrap; }
+
 .day-note {
   display: block;
   font-size: 11px;
@@ -665,6 +728,10 @@ td .cell-strong { font-weight: 500; }
 .center { min-height: 60vh; display: flex; align-items: center; justify-content: center; color: var(--muted); }
 
 /* ------------------------------------------------------------ Responsive */
+
+@media (max-width: 1100px) {
+  .recap-bottom { grid-template-columns: 1fr; }
+}
 
 @media (max-width: 900px) {
   .app-shell { flex-direction: column; }
