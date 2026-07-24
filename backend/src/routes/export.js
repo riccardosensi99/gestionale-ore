@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
+import { query } from '../db/pool.js';
 import { getSummary, getEntries } from '../services/summary.js';
 import { streamMonthlyPdf } from '../services/pdf.js';
 
@@ -22,6 +23,20 @@ router.get('/pdf', requireAuth, async (req, res, next) => {
         name: req.query.name || null,
         email: req.query.email || '',
       };
+
+      // L'admin scarica le ore di un dipendente solo dopo che questi ha
+      // inviato il mese: prima il prospetto è ancora una bozza.
+      if (targetUser.id !== req.user.id) {
+        const { rows } = await query(
+          `SELECT 1 FROM month_submissions WHERE user_id = $1 AND month = $2`,
+          [targetUser.id, month]
+        );
+        if (!rows.length) {
+          return res.status(409).json({
+            error: 'Il dipendente non ha ancora inviato questo mese',
+          });
+        }
+      }
     }
 
     const [summary, entries] = await Promise.all([

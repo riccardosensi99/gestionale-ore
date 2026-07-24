@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import passport from 'passport';
-import { config, isProd, isEmailAllowed } from '../config.js';
+import { config, isProd } from '../config.js';
+import { isEmailAllowed } from '../services/access.js';
 import { signToken, requireAuth } from '../middleware/auth.js';
 import { query } from '../db/pool.js';
 
@@ -44,7 +45,7 @@ router.post('/dev-login', async (req, res, next) => {
   }
   try {
     const email = String(req.body?.email || 'dev@example.com').toLowerCase();
-    if (!isEmailAllowed(email)) {
+    if (!(await isEmailAllowed(email))) {
       return res.status(403).json({ error: 'Email non autorizzata ad accedere' });
     }
     const name = req.body?.name || 'Utente Dev';

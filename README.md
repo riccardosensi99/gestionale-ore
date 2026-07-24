@@ -65,16 +65,27 @@ docker-compose.yml
 
 ## Accesso consentito (whitelist)
 
-Di default chiunque abbia un account Google può entrare. Per limitare l'accesso,
-imposta in `.env`:
+Di default chiunque abbia un account Google può entrare. L'elenco di chi può
+accedere si gestisce in due modi, che convivono:
 
-```
-ALLOWED_EMAILS=mario@azienda.it,@azienda.it
-```
+- dal **Backoffice**, sezione *Accessi consentiti* (tabella `allowed_emails`);
+- da `.env`, utile al primo avvio quando non esiste ancora un admin:
 
-Accetta email singole o interi domini (`@azienda.it`). Chi non è in elenco viene
-respinto **prima** che l'utente venga creato a database, e vede un messaggio
-dedicato nella pagina di login. Lista vuota = nessuna restrizione.
+  ```
+  ALLOWED_EMAILS=mario@azienda.it,@azienda.it
+  ```
+
+Entrambi accettano email singole o interi domini (`@azienda.it`). Chi non è in
+elenco viene respinto **prima** che l'utente venga creato a database, e vede un
+messaggio dedicato nella pagina di login. Elenco vuoto ovunque = nessuna
+restrizione.
+
+## Invio del mese
+
+Il dipendente chiude il mese con **Invia il mese**: da quel momento l'admin può
+scaricarne il PDF dal backoffice. Finché il mese non è inviato il download
+risponde `409` e il pulsante resta disabilitato. Il dipendente può riaprire il
+mese per correggerlo.
 
 ## Calendario e ore
 
@@ -109,5 +120,10 @@ dedicato nella pagina di login. Lista vuota = nessuna restrizione.
 | PUT/DELETE | `/entries/:id` | Modifica/elimina |
 | GET | `/summary?month=YYYY-MM` | Riepilogo mensile |
 | GET | `/export/pdf?month=YYYY-MM` | PDF del mese |
+| GET | `/summary/year?year=YYYY` | Recap annuale per mese |
+| GET/POST/DELETE | `/entries/submission` | Stato, invio e riapertura del mese |
 | GET | `/admin/users` | (admin) elenco utenti |
+| DELETE | `/admin/users/:id` | (admin) elimina utente e sue ore |
+| GET/POST/DELETE | `/admin/allowed-emails` | (admin) whitelist accessi |
+| GET | `/admin/submissions?month=YYYY-MM` | (admin) chi ha inviato il mese |
 | GET | `/admin/users/:id/summary?month=YYYY-MM` | (admin) dettaglio utente |

@@ -64,6 +64,60 @@ router.post('/', async (req, res, next) => {
   }
 });
 
+// GET /entries/submission?month=YYYY-MM — stato di invio del mese.
+router.get('/submission', async (req, res, next) => {
+  try {
+    const month = req.query.month;
+    if (!month || !MONTH_RE.test(month)) {
+      return res.status(400).json({ error: 'Parametro month richiesto (YYYY-MM)' });
+    }
+    const { rows } = await query(
+      `SELECT submitted_at FROM month_submissions WHERE user_id = $1 AND month = $2`,
+      [req.user.id, month]
+    );
+    res.json({ submittedAt: rows[0]?.submitted_at ?? null });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /entries/submission — il dipendente invia il mese all'amministrazione.
+router.post('/submission', async (req, res, next) => {
+  try {
+    const month = req.body?.month;
+    if (!month || !MONTH_RE.test(month)) {
+      return res.status(400).json({ error: 'Parametro month richiesto (YYYY-MM)' });
+    }
+    const { rows } = await query(
+      `INSERT INTO month_submissions (user_id, month)
+       VALUES ($1, $2)
+       ON CONFLICT (user_id, month) DO UPDATE SET submitted_at = now()
+       RETURNING submitted_at`,
+      [req.user.id, month]
+    );
+    res.status(201).json({ submittedAt: rows[0].submitted_at });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// DELETE /entries/submission?month=YYYY-MM — revoca l'invio per correggere.
+router.delete('/submission', async (req, res, next) => {
+  try {
+    const month = req.query.month;
+    if (!month || !MONTH_RE.test(month)) {
+      return res.status(400).json({ error: 'Parametro month richiesto (YYYY-MM)' });
+    }
+    await query(
+      `DELETE FROM month_submissions WHERE user_id = $1 AND month = $2`,
+      [req.user.id, month]
+    );
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+});
+
 // POST /entries/bulk  — upsert di più giorni in un'unica transazione.
 // Usato dalla precompilazione del mese: o passano tutti i giorni o nessuno.
 router.post('/bulk', async (req, res, next) => {

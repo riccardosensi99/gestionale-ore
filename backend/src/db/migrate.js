@@ -25,6 +25,25 @@ CREATE TABLE IF NOT EXISTS time_entries (
 CREATE INDEX IF NOT EXISTS idx_time_entries_user_date
   ON time_entries (user_id, entry_date);
 
+-- Email autorizzate ad accedere, gestite dal backoffice. Una voce che inizia
+-- con "@" vale per l'intero dominio.
+CREATE TABLE IF NOT EXISTS allowed_emails (
+  id          SERIAL PRIMARY KEY,
+  email       TEXT UNIQUE NOT NULL,
+  created_by  INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Invio del mese da parte del dipendente: finché non è inviato, l'admin non
+-- scarica il PDF di quel mese.
+CREATE TABLE IF NOT EXISTS month_submissions (
+  id            SERIAL PRIMARY KEY,
+  user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  month         CHAR(7) NOT NULL,
+  submitted_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (user_id, month)
+);
+
 -- Il tipo 'rest' (riposo) è stato aggiunto dopo: allinea le installazioni
 -- esistenti, dove la tabella era già stata creata senza quel valore.
 ALTER TABLE time_entries DROP CONSTRAINT IF EXISTS time_entries_type_check;

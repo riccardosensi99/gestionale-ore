@@ -1,6 +1,7 @@
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
-import { config, isEmailAllowed } from './config.js';
+import { config } from './config.js';
+import { isEmailAllowed } from './services/access.js';
 import { query } from './db/pool.js';
 
 export function configurePassport() {
@@ -22,7 +23,7 @@ export function configurePassport() {
           const email = (profile.emails?.[0]?.value || '').toLowerCase();
 
           // Whitelist: nessun utente viene creato se l'email non è autorizzata.
-          if (!isEmailAllowed(email)) {
+          if (!(await isEmailAllowed(email))) {
             return done(null, false, { reason: 'not_allowed' });
           }
 

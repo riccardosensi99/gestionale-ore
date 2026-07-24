@@ -32,14 +32,3 @@ export const config = {
 };
 
 export const isProd = config.env === 'production';
-
-// True se l'email può accedere. Con whitelist vuota passano tutti.
-// Le voci che iniziano con "@" valgono per l'intero dominio.
-export function isEmailAllowed(email) {
-  if (!config.allowedEmails.length) return true;
-  const normalized = String(email || '').trim().toLowerCase();
-  if (!normalized) return false;
-  return config.allowedEmails.some((entry) =>
-    entry.startsWith('@') ? normalized.endsWith(entry) : normalized === entry
-  );
-}

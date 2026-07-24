@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api, API_URL } from '../api/client.js';
 import SummaryCards from '../components/SummaryCards.jsx';
+import { useToast } from '../components/Toast.jsx';
 import {
   TYPE_LABELS,
   defaultTypeFor,
@@ -23,6 +24,9 @@ export default function MonthView() {
   const [prefilled, setPrefilled] = useState(null);
   // Richiesta di conferma prima di replicare le ore sul resto del mese.
   const [askPrefill, setAskPrefill] = useState(null);
+  // Quando il mese è inviato, l'admin può scaricarne il PDF.
+  const [submittedAt, setSubmittedAt] = useState(null);
+  const toast = useToast();
 
   const days = daysInMonth(month);
 
@@ -31,16 +35,38 @@ export default function MonthView() {
     setSummary(s.data.summary);
   }, [month]);
 
+  const submitMonth = async () => {
+    try {
+      const { data } = await api.post('/entries/submission', { month });
+      setSubmittedAt(data.submittedAt);
+      toast(`${monthLabel(month)} inviato all'amministrazione`);
+    } catch {
+      toast('Invio non riuscito', 'error');
+    }
+  };
+
+  const revokeSubmission = async () => {
+    try {
+      await api.delete('/entries/submission', { params: { month } });
+      setSubmittedAt(null);
+      toast(`${monthLabel(month)} riaperto: puoi modificarlo`);
+    } catch {
+      toast('Operazione non riuscita', 'error');
+    }
+  };
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     setPrefilled(null);
     setAskPrefill(null);
     try {
-      const [e, s] = await Promise.all([
+      const [e, s, sub] = await Promise.all([
         api.get('/entries', { params: { month } }),
         api.get('/summary', { params: { month } }),
+        api.get('/entries/submission', { params: { month } }),
       ]);
+      setSubmittedAt(sub.data.submittedAt);
       const map = {};
       e.data.entries.forEach((row) => {
         map[String(row.entry_date).slice(0, 10)] = row;
@@ -142,9 +168,16 @@ export default function MonthView() {
             <button title="Mese successivo" onClick={() => setMonth((m) => shiftMonth(m, 1))}>›</button>
           </div>
           <button className="btn secondary" onClick={() => setMonth(currentMonth())}>Oggi</button>
-          <a className="btn" href={`${API_URL}/export/pdf?month=${month}`} target="_blank" rel="noreferrer">
+          <a className="btn secondary" href={`${API_URL}/export/pdf?month=${month}`} target="_blank" rel="noreferrer">
             ⬇ Esporta PDF
           </a>
+          {submittedAt ? (
+            <button className="btn secondary" onClick={revokeSubmission}>
+              ✓ Inviato — riapri
+            </button>
+          ) : (
+            <button className="btn" onClick={submitMonth}>Invia il mese</button>
+          )}
         </div>
       </header>
 
