@@ -30,16 +30,36 @@ export function configurePassport() {
           const googleId = profile.id;
           const role = config.adminEmails.includes(email) ? 'admin' : 'user';
 
+          // L'utente può già esistere con lo stesso google_id (login ripetuto)
+          // oppure con la stessa email ma un google_id diverso (creato dal
+          // login di sviluppo, o email cambiata lato Google): in entrambi i
+          // casi si aggiorna la riga esistente invece di inserirne una nuova,
+          // che violerebbe l'unique su email.
+          const { rows: existing } = await query(
+            `SELECT id FROM users
+             WHERE google_id = $1 OR email = $2
+             ORDER BY (google_id = $1) DESC
+             LIMIT 1`,
+            [googleId, email]
+          );
+
+          if (existing.length) {
+            const { rows } = await query(
+              `UPDATE users
+               SET google_id = $1,
+                   email = $2,
+                   name = $3,
+                   role = CASE WHEN role = 'admin' THEN 'admin' ELSE $4 END
+               WHERE id = $5
+               RETURNING id, email, name, role`,
+              [googleId, email, name, role, existing[0].id]
+            );
+            return done(null, rows[0]);
+          }
+
           const { rows } = await query(
             `INSERT INTO users (google_id, email, name, role)
              VALUES ($1, $2, $3, $4)
-             ON CONFLICT (google_id) DO UPDATE
-               SET email = EXCLUDED.email,
-                   name = EXCLUDED.name,
-                   role = CASE
-                            WHEN users.role = 'admin' THEN 'admin'
-                            ELSE EXCLUDED.role
-                          END
              RETURNING id, email, name, role`,
             [googleId, email, name, role]
           );
