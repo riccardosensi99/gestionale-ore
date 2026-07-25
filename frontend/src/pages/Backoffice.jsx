@@ -4,7 +4,7 @@ import SummaryCards from '../components/SummaryCards.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
 import { useToast } from '../components/Toast.jsx';
 import { useAuth } from '../auth/AuthContext.jsx';
-import { TYPE_LABELS, currentMonth, monthLabel, shiftMonth } from '../lib/dates.js';
+import { TYPE_LABELS, currentMonth, daysInMonth, monthLabel, shiftMonth } from '../lib/dates.js';
 
 const dateTime = (value) =>
   new Date(value).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' });
@@ -27,6 +27,8 @@ export default function Backoffice() {
   const [fromEnv, setFromEnv] = useState([]);
   const [newEmail, setNewEmail] = useState('');
   const [adding, setAdding] = useState(false);
+  const [emailToRemove, setEmailToRemove] = useState(null);
+  const [removing, setRemoving] = useState(false);
 
   const loadUsers = () =>
     api.get('/admin/users').then(({ data }) => setUsers(data.users));
@@ -83,8 +85,13 @@ export default function Backoffice() {
     ev.preventDefault();
     setAdding(true);
     try {
+      const first = !allowed.length && !fromEnv.length;
       await api.post('/admin/allowed-emails', { email: newEmail });
-      toast(`${newEmail.trim().toLowerCase()} può ora accedere`);
+      toast(
+        first
+          ? 'Whitelist attivata: da ora entrano solo le email in elenco (e gli admin)'
+          : `${newEmail.trim().toLowerCase()} può ora accedere`
+      );
       setNewEmail('');
       await loadAllowed();
     } catch (err) {
@@ -94,19 +101,29 @@ export default function Backoffice() {
     }
   };
 
-  const removeEmail = async (entry) => {
+  const removeEmail = async () => {
+    setRemoving(true);
     try {
-      await api.delete(`/admin/allowed-emails/${entry.id}`);
-      toast(`${entry.email} rimossa dalla whitelist`);
+      await api.delete(`/admin/allowed-emails/${emailToRemove.id}`);
+      toast(`${emailToRemove.email} rimossa dalla whitelist`);
+      setEmailToRemove(null);
       await loadAllowed();
     } catch {
       toast('Rimozione non riuscita', 'error');
+    } finally {
+      setRemoving(false);
     }
   };
 
   if (loading) return <div className="center">Caricamento…</div>;
 
   const submittedAt = selected ? submissions[selected.id] : null;
+
+  // Il dettaglio copre tutti i giorni del mese: ferie, malattia e riposi
+  // restano visibili e i giorni lavorativi vuoti vengono evidenziati.
+  const byDate = new Map(
+    (detail?.entries ?? []).map((e) => [String(e.entry_date).slice(0, 10), e])
+  );
 
   return (
     <>
@@ -175,7 +192,8 @@ export default function Backoffice() {
             <h2>Accessi consentiti</h2>
             <p className="subtitle">
               Solo queste email possono entrare. Usa <code>@azienda.it</code> per
-              autorizzare un intero dominio. Elenco vuoto: accede chiunque.
+              autorizzare un intero dominio. Elenco vuoto: accede chiunque. Gli
+              amministratori configurati in <code>ADMIN_EMAILS</code> entrano sempre.
             </p>
           </div>
         </div>
@@ -204,7 +222,7 @@ export default function Backoffice() {
               {allowed.map((entry) => (
                 <li className="chip" key={entry.id}>
                   {entry.email}
-                  <button title="Rimuovi" onClick={() => removeEmail(entry)}>✕</button>
+                  <button title="Rimuovi" onClick={() => setEmailToRemove(entry)}>✕</button>
                 </li>
               ))}
             </ul>
@@ -275,23 +293,49 @@ export default function Backoffice() {
                     <tr><th>Data</th><th>Tipo</th><th>Ore</th><th>Nota</th></tr>
                   </thead>
                   <tbody>
-                    {detail.entries.length === 0 && (
-                      <tr><td className="empty-row" colSpan="4">Nessuna registrazione.</td></tr>
-                    )}
-                    {detail.entries.map((e) => (
-                      <tr key={e.id}>
-                        <td><span className="cell-strong">{String(e.entry_date).slice(0, 10)}</span></td>
-                        <td><span className={`badge ${e.type}`}>{TYPE_LABELS[e.type]}</span></td>
-                        <td>{e.type === 'worked' ? e.hours : '—'}</td>
-                        <td>{e.note || ''}</td>
-                      </tr>
-                    ))}
+                    {daysInMonth(month).map((day) => {
+                      const entry = byDate.get(day.date);
+                      return (
+                        <tr key={day.date}>
+                          <td>
+                            <span className="cell-strong">
+                              {day.weekday} {day.date.slice(8)}
+                            </span>
+                          </td>
+                          <td>
+                            {entry ? (
+                              <span className={`badge ${entry.type}`}>{TYPE_LABELS[entry.type]}</span>
+                            ) : day.holiday ? (
+                              <span className="badge rest">Festività</span>
+                            ) : day.isWeekend ? (
+                              <span className="badge rest">Riposo</span>
+                            ) : (
+                              <span className="badge missing">Non registrato</span>
+                            )}
+                          </td>
+                          <td>{entry?.type === 'worked' ? entry.hours : '—'}</td>
+                          <td>{entry?.note || day.holiday || ''}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
             </>
           )}
         </section>
+      )}
+
+      {emailToRemove && (
+        <ConfirmDialog
+          danger
+          busy={removing}
+          title="Rimuovere questo accesso?"
+          message={`${emailToRemove.email} non potrà più accedere. Le ore già registrate restano al loro posto.`}
+          confirmLabel="Rimuovi"
+          onConfirm={removeEmail}
+          onCancel={() => setEmailToRemove(null)}
+        />
       )}
 
       {toDelete && (

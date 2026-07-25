@@ -30,6 +30,14 @@ export default function Recap() {
   const maxHours = Math.max(1, ...months.map((m) => m.totalHours));
   const isOpen = (month) => month === thisMonth;
 
+  // Il grafico copre tutti e 12 i mesi: con soli due mesi registrati le barre
+  // finivano agli estremi del riquadro e l'andamento era illeggibile.
+  const byMonth = new Map(months.map((m) => [m.month, m]));
+  const yearMonths = Array.from({ length: 12 }, (_, i) => {
+    const month = `${year}-${String(i + 1).padStart(2, '0')}`;
+    return byMonth.get(month) ?? { month, totalHours: 0 };
+  });
+
   return (
     <>
       <header className="page-head">
@@ -131,13 +139,20 @@ export default function Recap() {
               </div>
               <div className="panel-body">
                 <div className="bars">
-                  {months.map((m) => (
-                    <div className="bar" key={m.month}>
+                  {yearMonths.map((m) => (
+                    <div
+                      className="bar"
+                      key={m.month}
+                      title={`${monthLabel(m.month)}: ${m.totalHours}h`}
+                    >
+                      <div className="value">{m.totalHours || ''}</div>
                       <div className="track">
-                        <div
-                          className={`fill${isOpen(m.month) ? '' : ' alt'}`}
-                          style={{ height: `${(m.totalHours / maxHours) * 100}%` }}
-                        />
+                        {m.totalHours > 0 && (
+                          <div
+                            className={`fill${isOpen(m.month) ? '' : ' alt'}`}
+                            style={{ height: `${(m.totalHours / maxHours) * 100}%` }}
+                          />
+                        )}
                       </div>
                       <div className="day">{MONTH_SHORT[Number(m.month.slice(5)) - 1]}</div>
                     </div>

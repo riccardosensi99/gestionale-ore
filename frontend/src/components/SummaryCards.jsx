@@ -9,6 +9,8 @@ export default function SummaryCards({ summary }) {
     },
     { label: 'Totale ore', value: summary?.totalHours ?? 0, tile: 'O', tone: 'purple' },
     { label: 'Giorni di ferie', value: summary?.vacationDays ?? 0, tile: 'F', tone: 'green' },
+    { label: 'Malattia/Permessi', value: summary?.sickDays ?? 0, tile: 'M', tone: 'amber' },
+    { label: 'Giorni di riposo', value: summary?.restDays ?? 0, tile: 'R', tone: 'grey' },
   ];
   return (
     <div className="cards">
