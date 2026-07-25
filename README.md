@@ -76,9 +76,10 @@ Ci sono due ambienti:
 - **staging**: locale, sul proprio computer, con Docker Compose come oggi
   (`docker compose up --build`), tipicamente allineato al branch `develop`.
   Nessuna automazione: è manuale.
-- **prod**: gira su questo stesso server (raggiungibile in tailnet via
-  Tailscale Serve) e si aggiorna **automaticamente** a ogni push/merge su
-  `main`, tramite un runner self-hosted di GitHub Actions.
+- **prod**: gira su questo stesso server ed è raggiungibile pubblicamente su
+  `https://gestionale.tail7752ad.ts.net/` (tramite NGINX Proxy Manager, non
+  direttamente su internet). Si aggiorna **automaticamente** a ogni
+  push/merge su `main`, tramite un runner self-hosted di GitHub Actions.
 
 ### Staging (locale)
 
@@ -89,11 +90,32 @@ basato su `.env.example`.
 
 1. Requisiti sul server (setup una tantum, manuale):
    - Tailscale installato e autenticato (`sudo tailscale up`), MagicDNS e
-     "HTTPS Certificates" attivi sul tailnet.
-   - `sudo tailscale serve --bg --https=443 http://127.0.0.1:8080` per
-     esporre il frontend in tailnet come
-     `https://<hostname>.<tailnet>.ts.net` (persiste automaticamente tra i
-     riavvii, nessun servizio aggiuntivo da creare).
+     "HTTPS Certificates" attivi sul tailnet. Su questo nodo il MagicDNS
+     name è `gestionale.tail7752ad.ts.net` (100.73.5.18).
+   - `docker-compose.prod.yml` pubblica il frontend solo su
+     `127.0.0.1:8081` (mai esposto direttamente su tutte le interfacce).
+   - **NGINX Proxy Manager** (container `nginxproxymanager`, già presente
+     sul server per altri servizi) fa da reverse proxy TLS pubblico sulla
+     porta 443 — non `tailscale serve`/`funnel`, perché NPM occupa già
+     `0.0.0.0:443` a livello di sistema e lo intercetterebbe comunque.
+     Config del Proxy Host in NPM:
+     - Domain: `gestionale.tail7752ad.ts.net`
+     - Forward: `gestionale-ore-frontend-1:80` (per nome container, non
+       IP/porta host — richiede che `nginxproxymanager` sia collegato
+       alla rete Docker `gestionale-ore_default`:
+       `docker network connect gestionale-ore_default nginxproxymanager`;
+       va rifatto se il container NPM viene *ricreato*, non solo
+       riavviato)
+     - SSL: certificato "custom", generato con
+       `tailscale cert gestionale.tail7752ad.ts.net` e caricato su NPM
+     - Force SSL, HTTP/2, websocket upgrade: attivi
+   - **Rinnovo automatico del certificato**: lo script
+     `/home/king/certs/renew-gestionale-cert.sh` rigenera il certificato
+     Tailscale (valido ~90gg) e lo ricarica su NPM via API, autenticandosi
+     con un utente NPM dedicato a permessi minimi
+     (`cert-renew@gestionale.local`, solo `certificates: manage`).
+     Schedulato via cron il 1° di ogni mese alle 3:00
+     (`crontab -l` sul server), log in `/home/king/certs/renew.log`.
    - Un runner GitHub Actions self-hosted registrato su questo repo con
      etichetta `gestionale-prod` (Settings → Actions → Runners), installato
      come servizio systemd (`./svc.sh install && ./svc.sh start`), con il
@@ -101,10 +123,11 @@ basato su `.env.example`.
    - File `/opt/gestionale-ore/.env.production` creato a mano sul server
      (basato su `.env.production.example`, con segreti reali: password
      Postgres, `JWT_SECRET` forte, credenziali Google OAuth,
-     `FRONTEND_URL`/`GOOGLE_CALLBACK_URL` con l'hostname Tailscale). Non
-     viene mai letto dal repository né committato.
+     `FRONTEND_URL=https://gestionale.tail7752ad.ts.net` e
+     `GOOGLE_CALLBACK_URL=https://gestionale.tail7752ad.ts.net/api/auth/google/callback`).
+     Non viene mai letto dal repository né committato.
    - Redirect URI OAuth registrato su Google Cloud Console:
-     `https://<hostname>.<tailnet>.ts.net/api/auth/google/callback`.
+     `https://gestionale.tail7752ad.ts.net/api/auth/google/callback`.
 
 2. Deploy: automatico a ogni push su `main` (workflow
    `.github/workflows/deploy-prod.yml`), che esegue sul runner self-hosted:
@@ -114,13 +137,17 @@ basato su `.env.example`.
      -f docker-compose.prod.yml up -d --build
    ```
 
+   Non serve alcun passo aggiuntivo dopo il deploy: NPM e il certificato
+   restano configurati indipendentemente dal container che viene
+   ricreato ad ogni deploy.
+
 3. Deploy manuale (fallback), dalla directory del repo sul server: lo
    stesso comando del punto 2.
 
 ## Accesso consentito (whitelist)
 
-Di default chiunque abbia un account Google può entrare. L'elenco di chi può
-accedere si gestisce in due modi, che convivono:
+Solo chi è in whitelist può entrare (oltre agli admin, che entrano sempre).
+L'elenco si gestisce in due modi, che convivono:
 
 - dal **Backoffice**, sezione *Accessi consentiti* (tabella `allowed_emails`);
 - da `.env`, utile al primo avvio quando non esiste ancora un admin:
@@ -131,8 +158,12 @@ accedere si gestisce in due modi, che convivono:
 
 Entrambi accettano email singole o interi domini (`@azienda.it`). Chi non è in
 elenco viene respinto **prima** che l'utente venga creato a database, e vede un
-messaggio dedicato nella pagina di login. Elenco vuoto ovunque = nessuna
-restrizione.
+messaggio dedicato nella pagina di login.
+
+**Whitelist vuota ovunque = accedono solo gli `ADMIN_EMAILS`.** È lo stato
+all'avvio: finché un admin non popola la whitelist (da UI o da `.env`),
+nessun altro può autenticarsi — utile per collaudare il deploy senza aprire
+subito l'accesso a chiunque abbia un account Google.
 
 ## Invio del mese
 
