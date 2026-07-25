@@ -63,7 +63,7 @@ frontend/   App React (login, vista mese, backoffice)
 frontend/Dockerfile.prod       Build prod frontend (vite build + nginx)
 frontend/nginx.conf            Config nginx (SPA + reverse proxy /api)
 docker-compose.yml              Ambiente locale/staging (dev, hot-reload)
-docker-compose.prod.yml         Ambiente di produzione
+docker-compose.prod.yml         Ambiente di produzione (frontend, backend, db, cloudflared)
 .env.production.example         Template variabili d'ambiente prod
 .github/workflows/ci.yml        Build/check su push e PR
 .github/workflows/deploy-prod.yml  Deploy automatico su push a main
@@ -77,8 +77,10 @@ Ci sono due ambienti:
   (`docker compose up --build`), tipicamente allineato al branch `develop`.
   Nessuna automazione: è manuale.
 - **prod**: gira su questo stesso server ed è raggiungibile pubblicamente su
-  `https://gestionale.tail7752ad.ts.net/` (tramite NGINX Proxy Manager, non
-  direttamente su internet). Si aggiorna **automaticamente** a ogni
+  `https://gestionale-ore.com/` tramite **Cloudflare Tunnel** (nessuna porta
+  aperta sul router). Resta anche accessibile su
+  `https://gestionale.tail7752ad.ts.net/` via NGINX Proxy Manager, per uso
+  interno/admin sulla tailnet. Si aggiorna **automaticamente** a ogni
   push/merge su `main`, tramite un runner self-hosted di GitHub Actions.
 
 ### Staging (locale)
@@ -116,6 +118,20 @@ basato su `.env.example`.
      (`cert-renew@gestionale.local`, solo `certificates: manage`).
      Schedulato via cron il 1° di ogni mese alle 3:00
      (`crontab -l` sul server), log in `/home/king/certs/renew.log`.
+   - **Cloudflare Tunnel** per l'esposizione pubblica su
+     `gestionale-ore.com` (dominio con nameserver su Cloudflare):
+     - Servizio `cloudflared` in `docker-compose.prod.yml`, sulla stessa
+       rete Docker del frontend (nessuna porta aggiuntiva esposta
+       sull'host: il tunnel fa solo connessioni in uscita verso
+       Cloudflare).
+     - Config e credenziali in `/opt/gestionale-ore/cloudflared/`
+       (`config.yml` + `creds.json`), creato a mano sul server come
+       `.env.production` — mai committato. `config.yml` fa da ingress
+       verso `http://frontend:80` per l'hostname `gestionale-ore.com`.
+     - Tunnel creato una tantum con
+       `cloudflared tunnel create gestionale-ore` e instradato con
+       `cloudflared tunnel route dns gestionale-ore gestionale-ore.com`
+       (richiede login una tantum con `cloudflared tunnel login`).
    - Un runner GitHub Actions self-hosted registrato su questo repo con
      etichetta `gestionale-prod` (Settings → Actions → Runners), installato
      come servizio systemd (`./svc.sh install && ./svc.sh start`), con il
@@ -123,11 +139,11 @@ basato su `.env.example`.
    - File `/opt/gestionale-ore/.env.production` creato a mano sul server
      (basato su `.env.production.example`, con segreti reali: password
      Postgres, `JWT_SECRET` forte, credenziali Google OAuth,
-     `FRONTEND_URL=https://gestionale.tail7752ad.ts.net` e
-     `GOOGLE_CALLBACK_URL=https://gestionale.tail7752ad.ts.net/api/auth/google/callback`).
+     `FRONTEND_URL=https://gestionale-ore.com` e
+     `GOOGLE_CALLBACK_URL=https://gestionale-ore.com/api/auth/google/callback`).
      Non viene mai letto dal repository né committato.
    - Redirect URI OAuth registrato su Google Cloud Console:
-     `https://gestionale.tail7752ad.ts.net/api/auth/google/callback`.
+     `https://gestionale-ore.com/api/auth/google/callback`.
 
 2. Deploy: automatico a ogni push su `main` (workflow
    `.github/workflows/deploy-prod.yml`), che esegue sul runner self-hosted:

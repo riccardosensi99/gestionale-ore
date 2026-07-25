@@ -45,5 +45,14 @@ services:
     ports:
       - "127.0.0.1:8081:80"
 
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --config /etc/cloudflared/config.yml run
+    volumes:
+      - /opt/gestionale-ore/cloudflared:/etc/cloudflared:ro
+    depends_on:
+      - frontend
+
 volumes:
   pgdata_prod:
