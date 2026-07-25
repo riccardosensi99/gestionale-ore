@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from './auth/AuthContext.jsx';
 import { applyTheme, currentTheme } from './lib/theme.js';
@@ -33,6 +33,9 @@ function ThemeToggle() {
 function Sidebar() {
   const { user, logout } = useAuth();
   const { pathname } = useLocation();
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => setOpen(false), [pathname]);
 
   const items = [
     { to: '/', icon: '◷', label: 'Le mie ore' },
@@ -41,31 +44,52 @@ function Sidebar() {
   ];
 
   return (
-    <aside className="sidebar">
-      <div className="brand">
-        <Logo size={40} />
-        <span className="name">Time Manager</span>
+    <>
+      <div className="mobile-topbar">
+        <div className="brand">
+          <Logo size={32} />
+          <span className="name">Time Manager</span>
+        </div>
+        <button
+          className={`hamburger${open ? ' open' : ''}`}
+          aria-label={open ? 'Chiudi menu' : 'Apri menu'}
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
       </div>
 
-      <div className="nav-label">MENU</div>
-      {items.map((item) => (
-        <Link key={item.to} to={item.to} className={`nav-item${pathname === item.to ? ' active' : ''}`}>
-          <span className="icon">{item.icon}</span>
-          {item.label}
-        </Link>
-      ))}
+      {open && <div className="sidebar-overlay" onClick={() => setOpen(false)} />}
 
-      <ThemeToggle />
+      <aside className={`sidebar${open ? ' open' : ''}`}>
+        <div className="brand">
+          <Logo size={40} />
+          <span className="name">Time Manager</span>
+        </div>
 
-      <div className="profile">
-        <span className="avatar">{initials(user)}</span>
-        <span className="who">
-          <span className="name">{user.name || user.email}</span>
-          <span className="role">{user.role === 'admin' ? 'Amministratore' : 'Dipendente'}</span>
-        </span>
-        <button className="logout" title="Esci" onClick={logout}>⏻</button>
-      </div>
-    </aside>
+        <div className="nav-label">MENU</div>
+        {items.map((item) => (
+          <Link key={item.to} to={item.to} className={`nav-item${pathname === item.to ? ' active' : ''}`}>
+            <span className="icon">{item.icon}</span>
+            {item.label}
+          </Link>
+        ))}
+
+        <ThemeToggle />
+
+        <div className="profile">
+          <span className="avatar">{initials(user)}</span>
+          <span className="who">
+            <span className="name">{user.name || user.email}</span>
+            <span className="role">{user.role === 'admin' ? 'Amministratore' : 'Dipendente'}</span>
+          </span>
+          <button className="logout" title="Esci" onClick={logout}>⏻</button>
+        </div>
+      </aside>
+    </>
   );
 }
 

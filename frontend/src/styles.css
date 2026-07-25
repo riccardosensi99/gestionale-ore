@@ -254,6 +254,50 @@ h1, h2, h3 { margin: 0; }
 }
 .profile .logout:hover { color: #fff; background: rgba(255, 255, 255, 0.08); }
 
+/* --------------------------------------------------------- Mobile topbar */
+
+.mobile-topbar {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  background: var(--nav-bg);
+  padding: 14px 20px;
+}
+.mobile-topbar .brand { margin-bottom: 0; }
+
+.hamburger {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: var(--r-sm);
+  background: rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+}
+.hamburger span {
+  width: 20px;
+  height: 2px;
+  background: #fff;
+  border-radius: 2px;
+  transition: transform 0.18s ease, opacity 0.18s ease;
+}
+.hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.hamburger.open span:nth-child(2) { opacity: 0; }
+.hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+.sidebar-overlay {
+  display: none;
+}
+
 /* -------------------------------------------------------------- Elementi */
 
 .btn {
@@ -397,7 +441,15 @@ input:disabled, select:disabled { background: var(--bg); color: var(--muted); }
 
 /* --------------------------------------------------------------- Tabelle */
 
-table { width: 100%; border-collapse: collapse; background: var(--card); }
+table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--card);
+}
 th, td { text-align: left; padding: 11px 23px; font-size: 13px; }
 th {
   font-size: 11px;
@@ -827,18 +879,33 @@ code {
 
 @media (max-width: 900px) {
   .app-shell { flex-direction: column; }
+
+  .mobile-topbar { display: flex; }
+
   .sidebar {
-    width: 100%;
-    height: auto;
-    position: static;
-    flex-direction: row;
-    align-items: center;
-    flex-wrap: wrap;
-    padding: 16px 20px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(300px, 84vw);
+    height: 100vh;
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    z-index: 40;
+    box-shadow: var(--shadow);
+    overflow-y: auto;
   }
-  .sidebar .brand { margin-bottom: 0; margin-right: auto; }
-  .sidebar .nav-label, .sidebar .nav-divider { display: none; }
-  .profile { margin-top: 0; }
-  .app-main { padding: 24px 20px 40px; }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar > .brand { display: none; }
+
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(6, 10, 20, 0.55);
+    z-index: 35;
+  }
+
+  .app-main { padding: 20px 20px 40px; }
   .login-hero { display: none; }
 }
