@@ -33,38 +33,22 @@ function ThemeToggle() {
 function Sidebar() {
   const { user, logout } = useAuth();
   const { pathname } = useLocation();
-  const [open, setOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
 
-  useEffect(() => setOpen(false), [pathname]);
+  useEffect(() => setMoreOpen(false), [pathname]);
 
   const items = [
-    { to: '/', icon: '◷', label: 'Le mie ore' },
-    { to: '/recap', icon: '▤', label: 'Recap mensile' },
-    ...(user.role === 'admin' ? [{ to: '/backoffice', icon: '♙', label: 'Backoffice' }] : []),
+    { to: '/', icon: '◷', label: 'Le mie ore', short: 'Ore' },
+    { to: '/recap', icon: '▤', label: 'Recap mensile', short: 'Recap' },
+    ...(user.role === 'admin'
+      ? [{ to: '/backoffice', icon: '♙', label: 'Backoffice', short: 'Backoffice' }]
+      : []),
   ];
 
   return (
     <>
-      <div className="mobile-topbar">
-        <div className="brand">
-          <Logo size={32} />
-          <span className="name">Time Manager</span>
-        </div>
-        <button
-          className={`hamburger${open ? ' open' : ''}`}
-          aria-label={open ? 'Chiudi menu' : 'Apri menu'}
-          aria-expanded={open}
-          onClick={() => setOpen((v) => !v)}
-        >
-          <span />
-          <span />
-          <span />
-        </button>
-      </div>
-
-      {open && <div className="sidebar-overlay" onClick={() => setOpen(false)} />}
-
-      <aside className={`sidebar${open ? ' open' : ''}`}>
+      {/* Desktop: sidebar laterale fissa */}
+      <aside className="sidebar">
         <div className="brand">
           <Logo size={40} />
           <span className="name">Time Manager</span>
@@ -89,6 +73,50 @@ function Sidebar() {
           <button className="logout" title="Esci" onClick={logout}>⏻</button>
         </div>
       </aside>
+
+      {/* Mobile: topbar semplice + tab bar in basso */}
+      <div className="mobile-topbar">
+        <div className="brand">
+          <Logo size={32} />
+          <span className="name">Time Manager</span>
+        </div>
+      </div>
+
+      <nav className="bottom-nav">
+        {items.map((item) => (
+          <Link
+            key={item.to}
+            to={item.to}
+            className={`bottom-nav-item${pathname === item.to ? ' active' : ''}`}
+          >
+            <span className="icon">{item.icon}</span>
+            <span className="label">{item.short}</span>
+          </Link>
+        ))}
+        <button
+          type="button"
+          className={`bottom-nav-item${moreOpen ? ' active' : ''}`}
+          aria-expanded={moreOpen}
+          onClick={() => setMoreOpen((v) => !v)}
+        >
+          <span className="icon">⋯</span>
+          <span className="label">Altro</span>
+        </button>
+      </nav>
+
+      {moreOpen && <div className="sidebar-overlay" onClick={() => setMoreOpen(false)} />}
+
+      <div className={`more-sheet${moreOpen ? ' open' : ''}`}>
+        <ThemeToggle />
+        <div className="profile">
+          <span className="avatar">{initials(user)}</span>
+          <span className="who">
+            <span className="name">{user.name || user.email}</span>
+            <span className="role">{user.role === 'admin' ? 'Amministratore' : 'Dipendente'}</span>
+          </span>
+          <button className="logout" title="Esci" onClick={logout}>⏻</button>
+        </div>
+      </div>
     </>
   );
 }
