@@ -60,8 +60,62 @@ email qualsiasi e scegli se entrare come admin. Il flag è ignorato quando
 ```
 backend/    API Express, auth, migrazioni, generazione PDF
 frontend/   App React (login, vista mese, backoffice)
-docker-compose.yml
+frontend/Dockerfile.prod       Build prod frontend (vite build + nginx)
+frontend/nginx.conf            Config nginx (SPA + reverse proxy /api)
+docker-compose.yml              Ambiente locale/staging (dev, hot-reload)
+docker-compose.prod.yml         Ambiente di produzione
+.env.production.example         Template variabili d'ambiente prod
+.github/workflows/ci.yml        Build/check su push e PR
+.github/workflows/deploy-prod.yml  Deploy automatico su push a main
 ```
+
+## Deployment
+
+Ci sono due ambienti:
+
+- **staging**: locale, sul proprio computer, con Docker Compose come oggi
+  (`docker compose up --build`), tipicamente allineato al branch `develop`.
+  Nessuna automazione: è manuale.
+- **prod**: gira su questo stesso server (raggiungibile in tailnet via
+  Tailscale Serve) e si aggiorna **automaticamente** a ogni push/merge su
+  `main`, tramite un runner self-hosted di GitHub Actions.
+
+### Staging (locale)
+
+Uguale al flusso di sviluppo descritto sopra in "Avvio rapido", con `.env`
+basato su `.env.example`.
+
+### Produzione
+
+1. Requisiti sul server (setup una tantum, manuale):
+   - Tailscale installato e autenticato (`sudo tailscale up`), MagicDNS e
+     "HTTPS Certificates" attivi sul tailnet.
+   - `sudo tailscale serve --bg --https=443 http://127.0.0.1:8080` per
+     esporre il frontend in tailnet come
+     `https://<hostname>.<tailnet>.ts.net` (persiste automaticamente tra i
+     riavvii, nessun servizio aggiuntivo da creare).
+   - Un runner GitHub Actions self-hosted registrato su questo repo con
+     etichetta `gestionale-prod` (Settings → Actions → Runners), installato
+     come servizio systemd (`./svc.sh install && ./svc.sh start`), con il
+     suo utente nel gruppo `docker`.
+   - File `/opt/gestionale-ore/.env.production` creato a mano sul server
+     (basato su `.env.production.example`, con segreti reali: password
+     Postgres, `JWT_SECRET` forte, credenziali Google OAuth,
+     `FRONTEND_URL`/`GOOGLE_CALLBACK_URL` con l'hostname Tailscale). Non
+     viene mai letto dal repository né committato.
+   - Redirect URI OAuth registrato su Google Cloud Console:
+     `https://<hostname>.<tailnet>.ts.net/api/auth/google/callback`.
+
+2. Deploy: automatico a ogni push su `main` (workflow
+   `.github/workflows/deploy-prod.yml`), che esegue sul runner self-hosted:
+
+   ```bash
+   docker compose --env-file /opt/gestionale-ore/.env.production \
+     -f docker-compose.prod.yml up -d --build
+   ```
+
+3. Deploy manuale (fallback), dalla directory del repo sul server: lo
+   stesso comando del punto 2.
 
 ## Accesso consentito (whitelist)
 

@@ -1,0 +1,23 @@
+name: Deploy to production
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, gestionale-prod]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and deploy
+        run: |
+          docker compose --env-file /opt/gestionale-ore/.env.production \
+            -f docker-compose.prod.yml up -d --build
+
+      - name: Prune old images
+        run: docker image prune -f
