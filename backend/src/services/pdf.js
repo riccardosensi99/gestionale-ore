@@ -13,6 +13,18 @@ const MONTHS_IT = [
   'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre',
 ];
 
+// entry_date può arrivare come stringa 'YYYY-MM-DD' o come Date (a seconda dei
+// type parser di pg): in entrambi i casi serve la data locale, non l'UTC.
+function isoDate(value) {
+  if (value instanceof Date) {
+    const y = value.getFullYear();
+    const m = String(value.getMonth() + 1).padStart(2, '0');
+    const d = String(value.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  return String(value).slice(0, 10);
+}
+
 function monthLabel(month) {
   const [year, m] = month.split('-').map(Number);
   return `${MONTHS_IT[m - 1]} ${year}`;
@@ -72,9 +84,7 @@ export function streamMonthlyPdf(res, { user, month, summary, entries }) {
 
   // Il dettaglio copre tutti i giorni del mese: i giorni senza registrazione
   // vengono qualificati (riposo, festività) invece di sparire dal prospetto.
-  const byDate = new Map(
-    entries.map((e) => [String(e.entry_date).slice(0, 10), e])
-  );
+  const byDate = new Map(entries.map((e) => [isoDate(e.entry_date), e]));
 
   drawRow(headers, true);
   monthDays(month).forEach((day) => {

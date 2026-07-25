@@ -371,6 +371,7 @@ input:disabled, select:disabled { background: var(--bg); color: var(--muted); }
 .kpi .tile.green { background: var(--green-soft); color: var(--green); }
 .kpi .tile.purple { background: var(--purple-soft); color: var(--purple); }
 .kpi .tile.amber { background: var(--amber-soft); color: var(--amber); }
+.kpi .tile.grey { background: var(--track); color: var(--muted); }
 .kpi .label { font-size: 13px; font-weight: 500; color: var(--muted); }
 .kpi .value { font-size: 25px; font-weight: 700; margin-top: 27px; letter-spacing: -0.01em; }
 .kpi .hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
@@ -449,9 +450,19 @@ td .cell-strong { font-weight: 500; }
   gap: 24px;
   align-items: start;
 }
-.recap-bottom .bars { padding: 0; }
-.recap-bottom .bars .track { height: 142px; }
+/* Grafico annuale: 12 colonne di pari larghezza, non distribuite agli estremi. */
+.recap-bottom .bars { padding: 0; justify-content: stretch; gap: 6px; }
+.recap-bottom .bars .bar { flex: 1; min-width: 0; gap: 8px; }
+.recap-bottom .bars .track { width: 100%; max-width: 34px; height: 142px; }
+.recap-bottom .bars .fill { min-height: 3px; }
 .recap-bottom .bars .fill.alt { background: var(--purple); }
+.recap-bottom .bars .bar .value {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  min-height: 14px;
+}
+.recap-bottom .bars .day { font-size: 11px; }
 
 .btn.danger { background: var(--danger); }
 .btn.danger:hover { background: #b91c1c; }
@@ -588,6 +599,8 @@ code {
 .badge.worked { background: var(--primary-soft); color: var(--primary); }
 .badge.vacation { background: var(--green-soft); color: var(--green); }
 .badge.sick { background: var(--amber-soft); color: var(--amber); }
+.badge.rest { background: var(--track); color: var(--muted); }
+.badge.missing { background: var(--track); color: var(--amber); }
 
 .table-input { height: 38px; border-radius: var(--r-sm); font-size: 13px; padding: 0 12px; }
 .table-input.hours { width: 84px; }

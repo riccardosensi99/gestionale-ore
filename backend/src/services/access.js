@@ -22,6 +22,11 @@ export async function isEmailAllowed(email) {
   const normalized = String(email || '').trim().toLowerCase();
   if (!normalized) return false;
 
+  // Gli admin di ADMIN_EMAILS entrano sempre: senza questa eccezione, chi
+  // aggiunge in whitelist solo le email dei dipendenti si chiude fuori dal
+  // backoffice al primo logout, senza più modo di correggere l'elenco.
+  if (config.adminEmails.includes(normalized)) return true;
+
   if (config.allowedEmails.length && matches(config.allowedEmails, normalized)) {
     return true;
   }
