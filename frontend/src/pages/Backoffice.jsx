@@ -192,8 +192,9 @@ export default function Backoffice() {
             <h2>Accessi consentiti</h2>
             <p className="subtitle">
               Solo queste email possono entrare. Usa <code>@azienda.it</code> per
-              autorizzare un intero dominio. Elenco vuoto: accede chiunque. Gli
-              amministratori configurati in <code>ADMIN_EMAILS</code> entrano sempre.
+              autorizzare un intero dominio. Elenco vuoto: non entra nessuno
+              (tranne gli amministratori). Gli amministratori configurati in{' '}
+              <code>ADMIN_EMAILS</code> entrano sempre.
             </p>
           </div>
         </div>
@@ -213,7 +214,8 @@ export default function Backoffice() {
 
           {!allowed.length && !fromEnv.length && (
             <p className="empty-row" style={{ marginTop: 20 }}>
-              Nessuna restrizione attiva: chiunque abbia un account Google può accedere.
+              Elenco vuoto: solo gli amministratori possono accedere finché non
+              aggiungi almeno un'email o un dominio.
             </p>
           )}
 
