@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, API_URL } from '../api/client.js';
 import SummaryCards from '../components/SummaryCards.jsx';
 import ConfirmDialog from '../components/ConfirmDialog.jsx';
+import { AdminPanelSettingsIcon, AdminPanelSettingsOutlinedIcon } from '../components/AdminIcon.jsx';
 import { useToast } from '../components/Toast.jsx';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { TYPE_LABELS, currentMonth, daysInMonth, monthLabel, shiftMonth } from '../lib/dates.js';
@@ -195,13 +196,18 @@ export default function Backoffice() {
                     </button>
                     <button
                       className="btn secondary"
-                      title={u.id === me.id ? 'Non puoi cambiare il tuo ruolo' : undefined}
+                      title={
+                        u.id === me.id
+                          ? 'Non puoi cambiare il tuo ruolo'
+                          : u.role === 'admin' ? 'Rimuovi admin' : 'Rendi admin'
+                      }
+                      aria-label={u.role === 'admin' ? 'Rimuovi admin' : 'Rendi admin'}
                       disabled={u.id === me.id}
                       onClick={() =>
                         setRoleTarget({ user: u, nextRole: u.role === 'admin' ? 'user' : 'admin' })
                       }
                     >
-                      {u.role === 'admin' ? 'Rimuovi admin' : 'Rendi admin'}
+                      {u.role === 'admin' ? <AdminPanelSettingsIcon /> : <AdminPanelSettingsOutlinedIcon />}
                     </button>
                     <button
                       className="btn ghost"
