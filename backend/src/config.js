@@ -22,7 +22,8 @@ export const config = {
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean),
   // Email (o domini, es. "@azienda.it") autorizzati ad accedere.
-  // Lista vuota = nessuna restrizione.
+  // Lista vuota = nessuna voce statica aggiuntiva (la whitelist resta comunque
+  // quella in DB; se anche quella è vuota, entrano solo gli ADMIN_EMAILS).
   allowedEmails: (process.env.ALLOWED_EMAILS || '')
     .split(',')
     .map((e) => e.trim().toLowerCase())

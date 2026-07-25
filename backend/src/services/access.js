@@ -32,9 +32,6 @@ export async function isEmailAllowed(email) {
   }
 
   const { rows } = await query(`SELECT email FROM allowed_emails`);
-  // Nessuna restrizione configurata da nessuna parte: accedono tutti.
-  if (!rows.length && !config.allowedEmails.length) return true;
-
   return matches(rows.map((r) => r.email), normalized);
 }
 
