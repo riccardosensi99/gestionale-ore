@@ -234,6 +234,7 @@ export default function MonthView() {
         {loading ? (
           <p className="panel-body">Caricamento…</p>
         ) : (
+          <div className="table-scroll">
           <table>
             <thead>
               <tr>
@@ -309,6 +310,7 @@ export default function MonthView() {
               })}
             </tbody>
           </table>
+          </div>
         )}
       </section>
     </>

@@ -23,6 +23,9 @@ export default function Backoffice() {
   const [toDelete, setToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
+  const [roleTarget, setRoleTarget] = useState(null);
+  const [changingRole, setChangingRole] = useState(false);
+
   const [allowed, setAllowed] = useState([]);
   const [fromEnv, setFromEnv] = useState([]);
   const [newEmail, setNewEmail] = useState('');
@@ -78,6 +81,25 @@ export default function Backoffice() {
       toast(err.response?.data?.error || 'Eliminazione non riuscita', 'error');
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const changeRole = async () => {
+    setChangingRole(true);
+    try {
+      await api.patch(`/admin/users/${roleTarget.user.id}/role`, { role: roleTarget.nextRole });
+      const label = roleTarget.user.name || roleTarget.user.email;
+      toast(
+        roleTarget.nextRole === 'admin'
+          ? `${label} è ora amministratore`
+          : `${label} non è più amministratore`
+      );
+      setRoleTarget(null);
+      await loadUsers();
+    } catch (err) {
+      toast(err.response?.data?.error || 'Cambio ruolo non riuscito', 'error');
+    } finally {
+      setChangingRole(false);
     }
   };
 
@@ -141,6 +163,7 @@ export default function Backoffice() {
             <p className="subtitle">{users.length} account registrati</p>
           </div>
         </div>
+        <div className="table-scroll">
         <table>
           <thead>
             <tr><th>Nome</th><th>Email</th><th>Ruolo</th><th>{monthLabel(month)}</th><th /></tr>
@@ -171,6 +194,16 @@ export default function Backoffice() {
                       Vedi ore
                     </button>
                     <button
+                      className="btn secondary"
+                      title={u.id === me.id ? 'Non puoi cambiare il tuo ruolo' : undefined}
+                      disabled={u.id === me.id}
+                      onClick={() =>
+                        setRoleTarget({ user: u, nextRole: u.role === 'admin' ? 'user' : 'admin' })
+                      }
+                    >
+                      {u.role === 'admin' ? 'Rimuovi admin' : 'Rendi admin'}
+                    </button>
+                    <button
                       className="btn ghost"
                       title={u.id === me.id ? 'Non puoi eliminare il tuo account' : 'Elimina'}
                       disabled={u.id === me.id}
@@ -184,6 +217,7 @@ export default function Backoffice() {
             ))}
           </tbody>
         </table>
+        </div>
       </section>
 
       <section className="section panel">
@@ -290,6 +324,7 @@ export default function Backoffice() {
                     <p className="subtitle">Dettaglio del mese selezionato</p>
                   </div>
                 </div>
+                <div className="table-scroll">
                 <table>
                   <thead>
                     <tr><th>Data</th><th>Tipo</th><th>Ore</th><th>Nota</th></tr>
@@ -322,6 +357,7 @@ export default function Backoffice() {
                     })}
                   </tbody>
                 </table>
+                </div>
               </div>
             </>
           )}
@@ -337,6 +373,26 @@ export default function Backoffice() {
           confirmLabel="Rimuovi"
           onConfirm={removeEmail}
           onCancel={() => setEmailToRemove(null)}
+        />
+      )}
+
+      {roleTarget && (
+        <ConfirmDialog
+          danger={roleTarget.nextRole === 'user'}
+          busy={changingRole}
+          title={
+            roleTarget.nextRole === 'admin'
+              ? 'Rendere amministratore?'
+              : 'Rimuovere i permessi da amministratore?'
+          }
+          message={
+            roleTarget.nextRole === 'admin'
+              ? `${roleTarget.user.name || roleTarget.user.email} potrà accedere al Backoffice e vedere le ore di tutti i dipendenti.`
+              : `${roleTarget.user.name || roleTarget.user.email} perderà l'accesso al Backoffice.`
+          }
+          confirmLabel={roleTarget.nextRole === 'admin' ? 'Rendi admin' : 'Rimuovi admin'}
+          onConfirm={changeRole}
+          onCancel={() => setRoleTarget(null)}
         />
       )}
 

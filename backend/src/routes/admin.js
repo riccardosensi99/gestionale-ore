@@ -40,6 +40,28 @@ router.get('/users/:id/summary', async (req, res, next) => {
   }
 });
 
+// PATCH /admin/users/:id/role — promuove/rimuove i permessi da amministratore.
+router.patch('/users/:id/role', async (req, res, next) => {
+  try {
+    const userId = Number(req.params.id);
+    const { role } = req.body || {};
+    if (!['user', 'admin'].includes(role)) {
+      return res.status(400).json({ error: "Ruolo non valido" });
+    }
+    if (userId === req.user.id) {
+      return res.status(400).json({ error: 'Non puoi cambiare il tuo stesso ruolo' });
+    }
+    const { rows } = await query(
+      `UPDATE users SET role = $1 WHERE id = $2 RETURNING id, email, name, role`,
+      [role, userId]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Utente non trovato' });
+    res.json({ user: rows[0] });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // DELETE /admin/users/:id — elimina un dipendente e, in cascata, le sue ore.
 router.delete('/users/:id', async (req, res, next) => {
   try {

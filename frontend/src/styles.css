@@ -439,15 +439,21 @@ input:disabled, select:disabled { background: var(--bg); color: var(--muted); }
 .panel-head h2 { font-size: 18px; font-weight: 600; }
 .panel-head .subtitle { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
 .panel-body { padding: 23px; }
-.panel > table { margin-top: 20px; }
+.panel > .table-scroll { margin-top: 20px; }
 
 /* --------------------------------------------------------------- Tabelle */
 
-table {
-  display: block;
+/* Il wrapper scrolla in orizzontale su viewport stretti; la table interna
+   resta in layout normale così le colonne si distribuiscono su tutta la
+   larghezza come su desktop (display:block sulla table stessa rompeva
+   l'algoritmo di sizing automatico delle colonne). */
+.table-scroll {
   max-width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+table {
   width: 100%;
   border-collapse: collapse;
   background: var(--card);

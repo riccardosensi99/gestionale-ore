@@ -168,26 +168,28 @@ export default function Recap() {
                   <p className="subtitle">Ore, giorni e straordinari per mese</p>
                 </div>
               </div>
-              <table>
-                <thead>
-                  <tr><th>Mese</th><th>Ore</th><th>Giorni</th><th>Extra</th><th>Stato</th></tr>
-                </thead>
-                <tbody>
-                  {[...months].reverse().map((m) => (
-                    <tr key={m.month}>
-                      <td><span className="cell-strong">{monthLabel(m.month).split(' ')[0]}</span></td>
-                      <td><span className="cell-strong">{m.totalHours}h</span></td>
-                      <td>{m.workedDays}</td>
-                      <td>{m.overtimeHours}h</td>
-                      <td>
-                        <span className={`badge ${isOpen(m.month) ? 'worked' : 'vacation'}`}>
-                          {isOpen(m.month) ? 'In corso' : 'Chiuso'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="table-scroll">
+                <table>
+                  <thead>
+                    <tr><th>Mese</th><th>Ore</th><th>Giorni</th><th>Extra</th><th>Stato</th></tr>
+                  </thead>
+                  <tbody>
+                    {[...months].reverse().map((m) => (
+                      <tr key={m.month}>
+                        <td><span className="cell-strong">{monthLabel(m.month).split(' ')[0]}</span></td>
+                        <td><span className="cell-strong">{m.totalHours}h</span></td>
+                        <td>{m.workedDays}</td>
+                        <td>{m.overtimeHours}h</td>
+                        <td>
+                          <span className={`badge ${isOpen(m.month) ? 'worked' : 'vacation'}`}>
+                            {isOpen(m.month) ? 'In corso' : 'Chiuso'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </section>
           </div>
         </>
